@@ -1,0 +1,217 @@
+---
+title: "Story - 3: Do stricter gun laws reduce firearm gun deaths?"
+author: 'Daria Dubovskaia'
+output:
+  html_document:
+    toc: yes
+    toc_float: yes
+    theme: united
+    code_folding: hide
+editor_options:
+  chunk_output_type: console
+  markdown: 
+    wrap: sentence
+---
+
+```{r setup, include=FALSE}
+# chunks
+knitr::opts_chunk$set(eval=TRUE, message=FALSE, warning=FALSE, fig.height=5, fig.align='center')
+
+# Load libraries
+library(httr)
+library(tidyverse)
+library(jsonlite)
+library(ggplot2)
+library(rvest)
+library(reshape2)
+```
+
+
+## Overview
+The debate over gun control laws in the United States is a long-running and contentious one. This study seeks to provide empirical evidence on whether stricter gun control laws can reduce firearm mortality rates. This report aims to educate policymakers, advocates, and the general public about effective gun violence prevention strategies by investigating the relationship between the legal framework governing firearm possession and the incidence of firearm-related deaths.
+
+This report investigates the relationship between the strictness of firearm control laws in different states in the United States and firearm mortality rates. Using a dataset that combines the strength of gun laws with firearm mortality rates, we categorize states on a 5-point Likert scale from strictest (1) to most lax (5) and examine how these laws affect firearm-related deaths. Our findings show a clear pattern: states with stricter gun control laws have lower firearm mortality rates. This report emphasizes the potential of gun control legislation to reduce firearm-related deaths and the significance of policy interventions in improving public safety.
+
+## 1. Data Preparation
+
+### 1.1 Load data, API
+
+During the data loading process for the analysis of firearm mortality and gun control laws in the United States, extensive datasets were meticulously compiled from two primary sources. First, provisional estimates for selected mortality indicators, including detailed statistics on firearm-related deaths, were obtained via API calls to the [Centers for Disease Control and Prevention's (CDC) National Center for Health Statistics (NCHS) Vital Statistics Rapid Release program](https://data.cdc.gov/NCHS/NCHS-VSRR-Quarterly-provisional-estimates-for-sele/489q-934x/about_data). This data collection provided a detailed look at firearm mortality rates per 100,000 people across all states, with a variety of temporal snapshots to ensure up-to-date and accurate analysis.
+
+Simultaneously, information on the strictness of gun control laws by state was obtained from the [Giffords Law Center's annual Gun Law Scorecard for 2022](https://giffords.org/lawcenter/resources/scorecard2022/). The table containing the strength of gun laws and their corresponding state names was extracted using meticulous web scraping techniques. This novel approach enabled the incorporation of qualitative assessments of each state's gun control policies into a quantifiable measure, classified on a 5-point Likert scale from most lax to strictest.
+
+```{r load_mort_rate}
+# Load mortality rate data using API
+url <- "https://data.cdc.gov/resource/489q-934x.json"
+
+response <- GET(url)
+
+# Load json, transform to dataframe
+content <- as.data.frame(fromJSON(content(response, as = "text")))
+
+data_rate <- content
+```
+
+```{r load_gunlaw_data}
+# Load mortality rate data using web scraping
+url <- "https://giffords.org/lawcenter/resources/scorecard2022/"
+webpage <- read_html(url)
+
+data_gun <- webpage %>%
+  html_table(fill = TRUE) %>% # the first table found
+  .[[1]]
+```
+
+### 1.2 Summary Statistics
+
+The first dataset, retrieved from the CDC's National Center for Health Statistics (NCHS), provided a comprehensive overview of firearm mortality rates in the United States. This dataset, which contained quarterly provisional estimates for selected mortality indicators, spanned several years and included detailed observations for each state, capturing the nuanced landscape of firearm-related fatalities through hundreds of observations across multiple variables. The structured format of this dataset allowed for a granular analysis of temporal trends in firearm mortality rates, providing insights into the changing dynamics of gun violence. This dataset contains **880 observations and 69 variables**.
+
+
+The data on the strictness of gun control laws by state catalogued the legislative stringency of gun laws in each state, ranking them based on the breadth and rigor of their gun control measures. The inclusion of this dataset enabled the quantification of legislative efforts toward gun control, resulting in a spectrum of gun law strengths ranging from the most lenient to the strictest across states. This dataset contains **51 observations and 5 variables**.
+
+The combination of these datasets into 'total_data' enabled a more nuanced investigation of the relationship between gun law stringency and firearm mortality rates. This comprehensive dataset, designed for the analysis, included observations of each state's average firearm mortality rate set against the backdrop of its legislative rigor in gun control. This dataset contains **51 observations and 3 variables**.
+
+### 1.3 Data cleaning
+The District of Columbia has some of the strongest gun laws in the country 
+
+The datasets for analyzing the relationship between gun law strength and firearm mortality rates were prepared in a meticulous manner, with information obtained from various sources refined and merged. Initially, the emphasis was on selecting relevant columns that directly contribute to understanding how gun control laws affect firearm-related fatalities.
+
+For the firearm mortality data, the process began by filtering the dataset to include only observations related to firearm-related injuries, with a specific focus on crude rates for 2022. This selection ensured that the analysis was based on the most recent and relevant data available (data about the gun law strength is not available for 2023). The following steps included renaming state-specific rate columns to a standardized state abbreviation format, pivoting the data into a uniform structure with state and mortality rate columns, and calculating the average mortality rate for each state. These transformations were critical in producing a dataset that accurately depicts the firearm mortality rate across the United States.
+
+Similarly, the gun law data for the year of 2022 needed to be filtered to focus on the most important columns, which describe the strength of gun control laws by state. The dataset was transformed to categorize gun control laws from most lax (1) to strictest (5). The District of Columbia wasn't included in the Giffords' table, but it has some of the strongest gun laws in the country. As a result, The District of Columbia was added to bin 5 (strictest gun control laws). This categorization involved assigning numerical values to each grade and including observations for jurisdictions that were not previously included in the dataset. To make it easier to merge with the mortality rate data, the state names were standardized to abbreviations.
+
+The combination of the cleaned and transformed gun law and firearm mortality datasets resulted in a comprehensive dataset that combined each state's legal strength with its average firearm mortality rate. This final dataset serves as the foundation for investigating the relationship between the severity of gun control laws and the rate of firearm-related deaths in the United States. 
+
+```{r clean_mort_data}
+# Choose necessary columns
+firearm_data <- data_rate %>%
+  filter(cause_of_death == "Firearm-related injury", time_period == "12 months ending with quarter", rate_type == "Crude", grepl('2022', year_and_quarter)) 
+
+# Change col_names
+state_names <- c("AK" = "rate_alaska" , "AL" =  "rate_alabama", "AR" =  "rate_arkansas", 
+                 "AZ" = "rate_arizona", "CA" = "rate_california", "CO"=  "rate_colorado",
+                 "CT" =  "rate_connecticut" , "DC"=  "rate_district_of_columbia", 
+                 "DE"= "rate_delaware", "FL"="rate_florida", "GA"= "rate_georgia", 
+                 "HI"= "rate_hawaii", "IA"= "rate_iowa", "ID"= "rate_idaho", "IL"="rate_illinois",
+                 "IN"="rate_indiana", "KS"="rate_kansas", "KY"="rate_kentucky",
+                 "LA"="rate_louisiana", "MA" = "rate_massachusetts", "MD" = "rate_maryland",
+                 "ME" = "rate_maine", "MI" = "rate_michigan", "MN" = "rate_minnesota",
+                 "MO" = "rate_missouri", "MS" = "rate_mississippi", "MT" = "rate_montana",
+                 "NC" = "rate_north_carolina", "ND" = "rate_north_dakota", "NE" = "rate_nebraska",
+                 "NH" = "rate_new_hampshire", "NJ" = "rate_new_jersey", "NM" = "rate_new_mexico",
+                 "NV" = "rate_nevada", "NY" = "rate_new_york", "OH" = "rate_ohio", 
+                 "OK" = "rate_oklahoma", "OR" = "rate_oregon", "PA" = "rate_pennsylvania",
+                 "RI" = "rate_rhode_island", "SC" = "rate_south_carolina", 
+                 "SD" = "rate_south_dakota", "TN" = "rate_tennessee", "TX" = "rate_texas",
+                 "UT" = "rate_utah", "VA" = "rate_virginia", "VT" = "rate_vermont",
+                 "WA" = "rate_washington", "WI" = "rate_wisconsin", "WV" = "rate_west_virginia",
+                 "WY" = "rate_wyoming")
+
+firearm_data <- firearm_data %>%
+  rename(!!!state_names) 
+
+# Pivot data so state and mortality rate are columns
+firearm_data <- firearm_data %>%
+  pivot_longer(cols = AK:WY, names_to = "state", values_to = "rate") %>%
+  select(year_and_quarter, state, rate) %>%
+  mutate_at(vars(rate), as.numeric) %>%
+  group_by(state) %>%
+  summarize(avg_mort_rate = mean(rate, na.rm = TRUE)) %>% 
+  mutate(avg_mort_rate = round(avg_mort_rate, digits = 2))
+```
+
+
+```{r clean_gunlaw_data}
+# Filter necessary columns
+law_data <- data_gun[-51, ] 
+law_data <- law_data %>%
+  select(c(2:3))
+
+# Create bins categorizing gun control laws from most lax to strictest
+law_data <- law_data %>% 
+  mutate(Grade = ifelse(str_starts(Grade, "A"), "5", Grade)) %>% 
+  mutate(Grade = ifelse(str_starts(Grade, "B"), "4", Grade)) %>% 
+  mutate(Grade = ifelse(str_starts(Grade, "C"), "3", Grade)) %>% 
+  mutate(Grade = ifelse(str_starts(Grade, "D"), "2", Grade)) %>% 
+  mutate(Grade = ifelse(str_starts(Grade, "F"), "1", Grade)) %>% 
+  add_row(State = "District of Columbia", Grade = "5") %>% 
+  rename("law_strength" = "Grade", "state" = "State")
+
+# Change col_names
+state_names <- c(
+  "Alabama" = "AL", "Alaska" = "AK", "Arizona" = "AZ", "Arkansas" = "AR", 
+  "California" = "CA", "Colorado" = "CO", "Connecticut" = "CT", "Delaware" = "DE", 
+  "Florida" = "FL", "Georgia" = "GA", "Hawaii" = "HI", "Idaho" = "ID", 
+  "Illinois" = "IL", "Indiana" = "IN", "Iowa" = "IA", "Kansas" = "KS", 
+  "Kentucky" = "KY", "Louisiana" = "LA", "Maine" = "ME", "Maryland" = "MD", 
+  "Massachusetts" = "MA", "Michigan" = "MI", "Minnesota" = "MN", "Mississippi" = "MS", 
+  "Missouri" = "MO", "Montana" = "MT", "Nebraska" = "NE", "Nevada" = "NV", 
+  "New Hampshire" = "NH", "New Jersey" = "NJ", "New Mexico" = "NM", "New York" = "NY", 
+  "North Carolina" = "NC", "North Dakota" = "ND", "Ohio" = "OH", "Oklahoma" = "OK", 
+  "Oregon" = "OR", "Pennsylvania" = "PA", "Rhode Island" = "RI", "South Carolina" = "SC", 
+  "South Dakota" = "SD", "Tennessee" = "TN", "Texas" = "TX", "Utah" = "UT", 
+  "Vermont" = "VT", "Virginia" = "VA", "Washington" = "WA", "West Virginia" = "WV", 
+  "Wisconsin" = "WI", "Wyoming" = "WY",  "District of Columbia" = "DC")
+
+law_data <- law_data %>%
+  mutate(state = state_names[state])
+```
+
+```{r merge_data}
+total_data <- merge(law_data,firearm_data,by=c("state"))
+```
+
+## 2. Data analysis
+
+In our thorough analysis, we delved deeper into the nuances of the heatmap data. A thorough examination of each Likert bin reveals intriguing patterns. For example, in bin 5, which represents the strictest gun control laws, the average mortality rate is significantly lower than in other bins, with rates as low as 9.03 and 5.47 per 100,000 people in states such as California and New York. This contrasts with bin 1, where average rates rise significantly, as seen in states such as Alabama and Mississippi, where rates are 25.35 and 30.17 per 100,000 people, respectively.The distribution within each bin also tells a story; states with middle-tier gun laws have a wide range of mortality rates (from New Mexico with the average mortality rate of 27.42 to Minnesota with the rate of 10.15 per 100,000 people), implying that, while legislation is important, it is likely influenced by other socioeconomic and cultural factors.
+
+To add depth to our story, we can investigate socioeconomic factors such as poverty rates, urbanization levels, and educational attainment, which may be associated with firearm mortality rates. Furthermore, qualitative data such as news reports and case studies may provide context for quantitative findings, potentially explaining why some states defy the overall trend. This could include looking into specific policies, enforcement practices, or community programs that either reduce or exacerbate the impact of gun laws.
+
+Furthermore, future research could use statistical models to account for these confounding factors, resulting in a more accurate picture of the direct effect of gun law strength on firearm mortality. This nuanced approach is consistent with the storytelling principles outlined in the resources provided, where data serves as a chapter in a larger story of societal challenges and responses.
+
+```{r fig.width=10, fig.height=12}
+# Create an ordered factor for 'state' based on 'avg_mort_rate' within each 'law_strength' group
+total_data <- total_data %>%
+  group_by(law_strength) %>%
+  mutate(state_order = rank(-avg_mort_rate)) %>%
+  ungroup() %>%
+  arrange(law_strength, state_order) %>%
+  mutate(state = factor(state, levels = rev(unique(state)), ordered = TRUE))
+
+# Plot with the ordered states
+ggplot(data = total_data, aes(x = law_strength, y = state, fill = avg_mort_rate)) +
+  geom_tile() +
+  geom_text(aes(label = round(avg_mort_rate, 2)), color = "black") +
+  scale_fill_gradient(low = "lightyellow", high = "#ff5a00", name = "Average Mortality Rate \n(per 100k)", limits = c(0, 31), breaks = c(0, 15, 30)) +
+  labs(title = "Effect of Gun Control Legislation on Firearm Mortality Rate by State",
+       x = "Gun Law Strength (1 = Most Lax, 5 = Strictest)",
+       y = "State") +
+  theme_minimal() +
+  theme(plot.title = element_text(size = 18, hjust = 0.5, face = "bold"), # Increase title font size
+        axis.title.x = element_text(size = 14), # Increase x-axis label font size
+        axis.title.y = element_text(size = 14),  # Increase y-axis label font size
+        legend.title = element_text(size = 12), # Increase legend title font size
+        legend.text = element_text(size = 12), # Increase legend text font size
+        axis.text.x = element_text(size = 12),
+        panel.grid.major = element_line(color = "grey96", size = 0.4),
+        legend.key.size = unit(1.7, "lines"))
+```
+
+
+## Conclusion
+
+The data tell a compelling story: states with stricter gun control laws tend to have lower firearm mortality rates. This pattern lends support to the idea that comprehensive gun control legislation is an effective tool for reducing gun-related fatalities. However, the variation within the categories suggests that legislation is only one aspect of the equation. To make significant progress in public health and safety, a multifaceted approach is required, encompassing not only strict laws but also strong enforcement, community education, and support programs. Policymakers are encouraged to consider these findings in the context of a comprehensive strategy for reducing firearm mortality.
+
+## References
+
+1) Knaflic, C. N. (2015). Storytelling with Data. https://doi.org/10.1002/9781119055259
+
+2) Matzen, L. E., Haass, M. J., Divis, K., Wang, Z., & Wilson, A. T. (2018). Data Visualization Saliency Model: A tool for evaluating abstract data visualizations. IEEE Transactions on Visualization and Computer Graphics, 24(1), 563–573. https://doi.org/10.1109/tvcg.2017.2743939
+
+3) NCHS - VSRR Quarterly provisional estimates for selected indicators of mortality | Data | Centers for Disease Control and Prevention. (2024, January 10). https://data.cdc.gov/NCHS/NCHS-VSRR-Quarterly-provisional-estimates-for-sele/489q-934x/about_data
+
+4) APIs | CDC Open Technology. (n.d.). https://open.cdc.gov/apis.html
+
+5) Giffords: Courage to Fight Gun Violence. (2023, December 18). Gun Law Scorecard 2022 | Giffords. Giffords. https://giffords.org/lawcenter/resources/scorecard2022/
+
+6) Everytown. (n.d.). Gun violence in Washington D.C. https://www.everytown.org/state/washington-dc/#:~:text=The%20District%20of%20Columbia%20has,and%20emergency%20ghost%20gun%20legislation.
