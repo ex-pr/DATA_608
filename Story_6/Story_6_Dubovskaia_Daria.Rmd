@@ -1,0 +1,762 @@
+---
+title: "Story - 6: What Is The State of Food Security and Nutrition in the US?"
+author: 'Daria Dubovskaia'
+output:
+  html_document:
+    toc: yes
+    toc_float: yes
+    theme: united
+    code_folding: hide
+editor_options:
+  chunk_output_type: console
+  markdown: 
+    wrap: sentence
+---
+
+```{r setup, include=FALSE}
+# chunks
+knitr::opts_chunk$set(eval=TRUE, message=FALSE, warning=FALSE, fig.align='center')
+
+# Load libraries
+library(tidyverse)
+library(ggplot2)
+library(readxl)
+library(openxlsx) 
+library(httr)
+library(janitor)
+library(xml2)
+library(rvest)
+library(shiny)
+library(leaflet)
+library(sf)
+library(rjson)
+library(plotly)
+library(corrplot)
+```
+
+
+## Overview
+
+While global headlines frequently highlight the plight of malnutrition and food insecurity in distant lands, a closer look reveals a pervasive and often overlooked struggle within the borders of the United States. Contrary to the popular belief that food insecurity is a "elsewhere" problem, current data and interactive maps show that many Americans face this issue on a daily basis.
+
+The US Census Bureau's Household Pulse Survey, for example, provides near-real-time data on how the pandemic has impacted food sufficiency levels across the country and across demographics from March 30 to April 11, 2022. Such surveys shed light on the harsh realities that some segments of our population face. This story focuses on those realities, the state of food security and nutrition in the United States, and serves as a call to action for policy reform.
+
+As policymakers, we are at a crossroads in making critical decisions that will shape our country's health and economy. Data from across the states paints a troubling picture of food insecurity and childhood obesity, reflecting a nation's struggle with hunger and health.
+
+
+
+## 1. Data Preparation
+
+### 1.1 Load data
+
+```{r bystate_data}
+# Path to excel book
+path <- "C:/Users/daria/Downloads/food1_by_state.xlsx"
+  
+# Get data from sheets 
+sheets <- openxlsx::getSheetNames(path) 
+df_1 <- lapply(sheets, openxlsx::read.xlsx, xlsxFile=path) 
+  
+# Assign state names to data frame 
+names(df_1) <- sheets 
+```
+
+```{r obesity_data}
+# Url to obesity table 
+url <- "https://millennialcities.com/childhood-obesity-rates-by-state-ranking-from-highest-to-lowest/"
+webpage <- read_html(url)
+
+# Get the first table found
+df_2 <- webpage %>%
+  html_table(fill = TRUE) %>% 
+  .[[1]]
+```
+
+
+```{r geo_data}
+# Read geo data json
+us_states_sf <- rjson::fromJSON(file='C:/Users/daria/Downloads/gz_2010_us_040_00_5m.json')
+```
+
+### 1.2 Summary Statistics
+
+
+### 1.3 Data cleaning
+
+
+```{r state_names}
+# Change col_names
+state_names <- c("AK" = "Alaska" , "AL" =  "Alabama", "AR" =  "Arkansas", 
+                 "AZ" = "Arizona", "CA" = "California", "CO"=  "Colorado",
+                 "CT" =  "Connecticut" ,  
+                 "DE"= "Delaware", "FL"="Florida", "GA"= "Georgia", 
+                 "HI"= "Hawaii", "IA"= "Iowa", "ID"= "Idaho", "IL"="Illinois",
+                 "IN"="Indiana", "KS"="Kansas", "KY"="Kentucky",
+                 "LA"="Louisiana", "MA" = "Massachusetts", "MD" = "Maryland",
+                 "ME" = "Maine", "MI" = "Michigan", "MN" = "Minnesota",
+                 "MO" = "Missouri", "MS" = "Mississippi", "MT" = "Montana",
+                 "NC" = "North Carolina", "ND" = "North Dakota", "NE" = "Nebraska",
+                 "NH" = "New Hampshire", "NJ" = "New Jersey", "NM" = "New Mexico",
+                 "NV" = "Nevada", "NY" = "New York", "OH" = "Ohio", 
+                 "OK" = "Oklahoma", "OR" = "Oregon", "PA" = "Pennsylvania",
+                 "RI" = "Rhode Island", "SC" = "South Carolina", 
+                 "SD" = "South Dakota", "TN" = "Tennessee", "TX" = "Texas",
+                 "UT" = "Utah", "VA" = "Virginia", "VT" = "Vermont",
+                 "WA" = "Washington", "WI" = "Wisconsin", "WV" = "West Virginia",
+                 "WY" = "Wyoming", "US" = "National")
+
+abbrev_state_names <- setNames(names(state_names), state_names)
+
+#obesity_df <- obesity_df %>%
+#  mutate(State = recode(State, !!!abbrev_state_names)) %>%
+  #select(-c(1))
+```
+
+```{r obesity_clean}
+# Copy data
+obesity_df <- df_2
+
+# Add columns to correspond with geo data and food insecutiry data
+obesity_df <- obesity_df %>% 
+  add_row(State = "Puerto Rico") %>% 
+  add_row(State = "District of Columbia")
+obesity_df <- obesity_df[!grepl("National", obesity_df$State),]
+```
+
+```{r state_data}
+# Copy data with only US in general, 50 states and DC
+food_insecurity_list <- df_1[1:52]
+
+for (state in names(food_insecurity_list)) {
+  df <- food_insecurity_list[[state]][-c(1:5, 7, 13, 16:34, 39, 40, 45, 51, 59, 62:84, 94:188), -c(3, 4, 7)]
+  colnames(df) <- c("Select characteristics", "Total", "Sometimes not enough to eat", "Often not enough to eat") 
+  
+# Replace '-' with NA
+  df[df == "-"] <- NA
+  
+# Transform the 2nd, 3rd, and 4th columns to numeric
+  df[, c("Total", "Sometimes not enough to eat", "Often not enough to eat")] <- sapply(df[, c("Total", "Sometimes not enough to eat", "Often not enough to eat")], as.numeric)
+  
+# Calculate food insecurity rate
+  df$`Food Insecurity Rate` <- with(df, (`Sometimes not enough to eat` + `Often not enough to eat`) / Total * 100)
+  
+# Transpose the dataframe
+  df_t <- as.data.frame(t(df))
+  
+# Reset numeric row names
+  colnames(df_t) <- df_t[1, ] # Set the first row as the column names
+  df_t <- df_t[-1, ] # Remove the first row since it's now the column names
+  df_t <- df_t[-c(1:3),]
+
+# Rename the last row to match the state name
+  rownames(df_t) <- state
+  
+# Transform to numeric
+  df_t <- sapply(df_t, as.numeric)
+  
+# Assign modified df back to list
+  food_insecurity_list[[state]] <- df_t
+}
+
+# Combine all dataframes in one
+food_insecurity_df <- bind_rows(food_insecurity_list, .id = "State")
+
+# Reset the row indices 
+row.names(food_insecurity_df) <- NULL
+```
+
+
+
+```{r fix_states}
+# Remove National data to correspond with geo data
+food_insecurity_data <- food_insecurity_df[-1, ]
+
+# Use full state names instead of abbrev
+food_insecurity_data <- food_insecurity_data %>%
+  mutate(State = recode(State, !!!state_names))
+
+# Add rows to to correspond with geo data
+food_insecurity_data$State[which(food_insecurity_data$State=="DC")] <- "District of Columbia"
+food_insecurity_data <- food_insecurity_data %>% add_row(State = "Puerto Rico")
+
+food_insecurity_data <- clean_names(food_insecurity_data)
+
+# Join obesity and food insecutiry by state
+food_insecurity_data <- cbind(food_insecurity_data, obesity_df)
+```
+
+
+
+```{r us_data}
+# Keep us detailed data
+us_food_df <- df_1[[1]]
+
+# Remove some rows
+us_food_df <- us_food_df[-c(1:5, 7, 13, 16:34, 39, 40, 45, 51, 59, 62:84, 94:188), ]
+
+# Change col names
+colnames(us_food_df) <- c("Select characteristics", "Total", "Enough of the kinds of food wanted", 
+"Enough food, but not always the kinds wanted", "Sometimes not enough to eat", "Often not enough to eat","Did not report") 
+
+# Replace '-' with NA
+us_food_df[us_food_df == "-"] <- NA
+
+# Transform columns to numeric
+us_food_df <- us_food_df %>%
+    mutate(across(-c(`Select characteristics`), as.numeric))
+```
+
+```{r us_data_rate}
+# Copy df
+us_food_rate_df <- us_food_df
+
+# Convert columns to numeric type
+us_food_rate_df[, 2:ncol(us_food_rate_df)] <- sapply(us_food_rate_df[, 2:ncol(us_food_rate_df)], as.numeric)
+
+# Calculate the rates
+for (i in names(us_food_rate_df[, 3:7])) {
+  us_food_rate_df[[i]] <- with(us_food_rate_df, (get(i) / Total) * 100)
+}
+
+us_food_rate_df$`Insecutiry Rate` <- us_food_rate_df$`Sometimes not enough to eat` + us_food_rate_df$`Often not enough to eat`
+
+us_food_rate_df$`Select characteristics` <- trimws(us_food_rate_df$`Select characteristics`)
+```
+
+
+## 2. Data analysis
+
+### 2.1 By state
+
+The series of visualizations begins with a state-by-state breakdown that shows the various levels of food insecurity and childhood obesity rates. These maps reveal an unexpected trend: states with higher food insecurity also have higher rates of obesity, challenging the widely held belief that obesity is a condition of excess rather than a sign of nutritional deficiency.
+
+
+When viewed through the lens of income, the plots reveal a bleak reality: households earning less than $25,000 per year have significantly higher food insecurity rates. This financial threshold appears to be a critical determinant, as higher-income households exhibit progressively lower rates of food insecurity and, in some cases, obesity.
+
+Our visual story delves into demographics, highlighting disparities by age, gender, and race/ethnicity. For example, the plots clearly show that females report higher rates of food insecurity than males. When broken down by age, a concerning pattern emerges: younger age groups experience more food insecurity, potentially paving the way for a lifetime of nutritional challenges.
+
+The differences between races and ethnicities are particularly compelling. The data visualizations highlight the stark contrasts, with Black and Hispanic populations experiencing food insecurity at significantly higher rates than their White and Asian counterparts. This disparity highlights the link between food insecurity, broader issues of social inequality, and systemic barriers to accessing nutritious food.
+
+Furthermore, the presence of children in households adds another level of complexity. States with a higher proportion of food-insecure households with children have higher rates of childhood obesity. This correlation has significant implications for these children's future health and economic well-being as they grow into adults.
+
+
+These findings have far-reaching policy implications. Existing food assistance programs, while noble in intent, fall short of addressing the complexities of food insecurity and its link to obesity. Our findings indicate a need for a multifaceted approach that includes:
+
+Improving Program Accessibility: Programs such as SNAP and WIC must be expanded to close the gap between need and assistance, particularly in states with the highest rates of food insecurity.
+
+Focusing on Nutritional Education: Investing in nutritional education programs could help households make healthier food choices while staying within their budget.
+
+Addressing Food Deserts: Policies that increase the availability of healthy food options in underserved areas have the potential to reduce the coexistence of food insecurity and obesity.
+
+Tailoring Interventions: Given the demographic differences in food insecurity and obesity, targeted interventions should be designed to address the specific needs of the most vulnerable groups, particularly children, in order to mitigate long-term health and social outcomes.
+
+
+---------------------------------
+
+Food insecurity reaches alarming proportions among households earning less than $25,000 per year—more than 20% in Mississippi and Louisiana, compared to less than 10% in states with higher average incomes such as Massachusetts and New Hampshire. This is more than just a disparity; it is one that costs us all: higher healthcare costs, lower productivity, and stunted economic growth.
+
+Gender disparities also exist, with 12% of females living in food-insecure households compared to 9.4% of males. This is more than just an issue of equality; it is also an economic challenge, as women account for a sizable portion of our workforce and are frequently the primary caregivers in their families.
+
+
+The narrative becomes more concerning as we delve deeper into age-related data. Young adults aged 18 to 24 have some of the highest rates of food insecurity, which affects their educational achievements and ability to contribute to the economy as they mature.
+
+The complexities of this issue are heightened when viewed through the lens of race and ethnicity. Our maps show that Black and Hispanic households experience significantly higher rates of food insecurity than their White counterparts. In some states, these rates are more than double, indicating systemic problems that go beyond simple economic explanations.
+
+
+Let us not be mistaken: the cost of food insecurity is enormous. Child hunger alone is estimated to cost the United States economy nearly $30 billion per year in lost educational attainment and health-care costs. Obesity-related health-care costs, which are frequently caused by early childhood obesity and poor nutrition, add billions to this total.
+
+
+Food security is not a partisan issue; it is an American one. It is an essential component of our country's well-being. As a result, we must prioritize long-term solutions such as supporting local food systems, incentivizing healthy food production, and incorporating food education into our schools.
+
+As representatives of the people, we have the information and the responsibility to enact policies that not only address immediate needs but also plan for the future. Investing in nutrition and food security today will result in a healthier, more economically stable tomorrow. It is an investment in our children's future and our country's continued prosperity.
+
+
+------------------
+Our country's nutritional struggle is not uniform; it varies greatly from state to state and city to city. The maps we examined highlight these stark contrasts with sobering clarity. For example, Mississippi has a nearly 25% rate of food insecurity, which is significantly higher than the national average. This is more than just a number; it refers to real people, real children, whose potential is hampered by a lack of consistent access to nutritious food.
+
+
+Food insecurity rates are lower in states such as Colorado and Massachusetts, however. However, even in these states, certain demographics, such as households earning between $25,000 and $35,000, continue to face significant challenges, with food insecurity rates hovering around 15%. These are often full-time working families who struggle to put food on the table.
+
+Our maps show that gender disparities are especially pronounced in states like Arkansas and Oklahoma, where women face significantly higher rates of food insecurity. The story is similar when it comes to racial and ethnic disparities. In several states, including Alabama and South Carolina, Black households face food insecurity at rates more than twice those of White households.
+
+
+When children are present in the home, rates of food insecurity often rise, as seen in Kentucky and West Virginia. The maps show that households with children have significantly higher food insecurity rates than those without—a troubling indicator of the future we are creating for our young citizens.
+
+These maps do more than just tell stories of hardship; they also demonstrate the economic impact on our states and nation. For example, areas with higher levels of food insecurity face higher healthcare costs due to diet-related diseases. Obesity and food insecurity are a public health crisis that directly affects the health of our economy.
+
+
+The visualization of this data highlights the importance of targeted policy interventions. We must address not only the symptoms, but also the underlying causes of food insecurity and its link to obesity.
+
+Policies that ensure living wages have a significant impact on food insecurity rates, as evidenced by lower rates in higher-income brackets. Increasing the minimum wage could be one step toward reducing these disparities, especially in states with the widest gaps.
+
+Furthermore, expanding nutrition-focused educational programs can empower people to make healthier food choices while staying within their budget. In areas with higher obesity rates, such programs may provide the knowledge base required to combat the rising tide of obesity-related health issues.
+
+
+Finally, investing in local agriculture can have a significant impact. We can improve overall nutrition by promoting farm-to-table programs and community gardens, particularly in urban food deserts.
+
+```{r us_map, warning=FALSE, message=FALSE, out.width='100%', out.height='1500px'}
+# UI for selecting options
+ui <- fluidPage(
+    div(
+    titlePanel("Food Insecurity Rates and Childhood Obesity Rates by State"),
+    div("Percentage of American adults in each state in households where there was sometimes or often not enough to eat, March 30 – April 11, 2022 ", align = "left", style = "margin-bottom: 20px; font-size: 12px;")
+  ),
+  
+  # First dropdown for selecting the general category 
+  selectInput("generalCategory", "Select Category:",
+              choices = c("Average in State","Sex", "Age", "Race/ethnicity", "Income", "Children in household", "Obesity Rate")),
+  
+  # Second dropdown will be dynamically updated based on the first dropdown
+  uiOutput("specificCategory"),
+  
+  # Output for the map
+  plotlyOutput("map"),
+  
+  # Additional text at the bottom
+  div(
+    style = "margin-top: 20px; font-size: 14px;", # Add margin on top and set font size
+    "Note: No available data for states colored in white for the selected category."
+  )
+)
+
+# Build server
+server <- function(input, output, session) {
+  
+  # Generate specificCategory dropdown based on generalCategory selection
+  output$specificCategory <- renderUI({
+    if (input$generalCategory == "Average in State") {
+      selectInput("demographic", "Choose:",
+                  choices = c("Average in State" = "total"))
+    } else if (input$generalCategory == "Sex") {
+      selectInput("demographic", "Choose Sex:",
+                  choices = c("Male" = "male", "Female" = "female"))
+    } else if(input$generalCategory == "Age") {
+      selectInput("demographic", "Choose Age Group:",
+                  choices = c("18 - 24" = "x18_24", "25 - 39" = "x25_39", 
+                              "40 - 54" = "x40_54", "55 - 64" = "x55_64", 
+                              "65 and above" = "x65_and_above"))}
+    
+      else if(input$generalCategory == "Race/ethnicity") {
+      selectInput("demographic", "Choose Race/ethnicity:",
+                  choices = c("Hispanic or Latino" = "hispanic_or_latino_may_be_of_any_race", "White alone, not Hispanic" = "white_alone_not_hispanic", "Black alone, not Hispanic" = "black_alone_not_hispanic", "Asian alone, not Hispanic"="asian_alone_not_hispanic")) 
+        
+    } else if(input$generalCategory == "Income") {
+      selectInput("demographic", "Choose Option:",
+                  choices = c("< $25k" = "less_than_25_000", "$25k - 34k" = "x25_000_34_999", "$35k - 49k" = "x35_000_49_999", "$50k - 74k" = "x50_000_74_999", "$75k - 100k" = "x75_000_99_999")) 
+      
+    } else if(input$generalCategory == "Children in household") {
+      selectInput("demographic", "Choose Option:",
+                  choices = c("Yes" = "children_in_household", "No" = "no_children"))
+      
+    } else if(input$generalCategory == "Obesity Rate") {
+      selectInput("demographic", "Choose Option:",
+                  choices = c("Percent Obese" = "Percent Obese", "Percent Overweight" = "Percent Overweight")) }
+  })
+
+  output$map <- renderPlotly({
+    # Ensure subCharacteristic has been chosen
+    req(input$demographic)
+    
+    # Use the input to select the correct column
+    demographic_column <- input$demographic
+    
+      custom_colorscale <- list(
+                          c(0, '#073568'),  
+                          c(0.5, '#eaeff2'),   
+                          c(1, '#7c0722')   ) 
+    
+    # Ensure the data is numeric
+    if(is.numeric(food_insecurity_data[[demographic_column]])) {
+      # Round the data to 1 decimal place before plotting
+      rounded_data <- round(food_insecurity_data[[demographic_column]], 1)
+      
+     # min_state <- food_insecurity_data$state[which.min(food_insecurity_data[[demographic_column]])]
+     # max_state <- food_insecurity_data$state[which.max(food_insecurity_data[[demographic_column]])]
+      #min_rate <- min(food_insecurity_data[[demographic_column]])
+     # max_rate <- max(food_insecurity_data[[demographic_column]])
+      
+      # Generate the choropleth map
+      p <- plot_ly() %>%
+        add_trace(
+          type = "choropleth",
+          geojson = us_states_sf,
+          locations = food_insecurity_data$state, 
+          featureidkey = 'properties.NAME',
+          z = rounded_data,
+          colorscale = custom_colorscale,
+          #zmin = 6,
+          #zmax = 15,
+          marker = list(line = list(width = 0))
+        ) %>%
+        colorbar(title = "Rate, %", len = 0.5,  
+      y = 0.5,    # Center the colorbar in the middle of the plot area
+      yanchor = "middle"  # Ensure the y position refers to the center of the colorbar
+      ) %>%
+        layout(title = paste("Food Insecurity Rate by", input$generalCategory),
+    annotations = list(
+      x = 0.5,
+      y = 1,
+      xref = 'paper',
+      yref = 'paper',
+      text = '9.4% / 15.5% - Average Food Insecurity / Obesity Rate',
+      showarrow = FALSE,
+      font = list(
+        size = 12
+      )
+    )) %>%
+        layout(geo = list(scope = 'usa', projection = list(type = 'albers usa'), showlakes = FALSE))
+    } else {
+      # Return the message if the data is not numeric
+      return(NULL)
+    }
+      
+    
+  })
+}
+
+# Run the app
+shinyApp(ui = ui, server = server)
+```
+
+
+
+### 2.2 US National
+
+Income and Food Security: The income chart shows a clear gradient: as income increases, more people report food sufficiency, while lower-income brackets experience higher levels of food insecurity. The disparity between those earning less than $25K per year and those earning more than $100K highlights income as a key factor in food security.
+
+Gender Differences in Food Security: The chart shows that females have a slightly higher rate of food insecurity than males. This emphasizes the importance of gender-sensitive policy interventions that address the unique challenges faced by women and girls.
+
+Food Security Across Ages: The chart reveals that food insecurity is not experienced equally by all age groups. Younger age groups, particularly those aged 18 to 24, report higher rates of food insecurity, which could be attributed to factors such as entry-level wages and student status. Older age groups have greater food security, which could be due to higher income stability or access to retirement funds and social security benefits.
+
+Income-Sensitive Interventions: According to the data, policies should be designed to address income disparities in food security. Increasing assistance to low-income families through increased SNAP benefits or tax credits could be effective.
+
+Gender-Focused Programs: Recognizing gender disparities, policies could aim to expand nutrition assistance programs for single mothers while also providing more robust support for female-led families.
+
+Age-appropriate Strategies: Policies should take into account the vulnerabilities of young people, such as expanding campus-based food assistance programs and providing more robust job training and employment opportunities for young adults.
+
+
+```{r income_food, warning=FALSE, message=FALSE}
+# Filter us data for income only
+us_food_rate_df_filtered <- us_food_rate_df[31:36, c(1,3:6)]
+
+# Change income range naming
+us_food_rate_df_filtered <- us_food_rate_df_filtered %>%
+  mutate(`Select characteristics` = recode(`Select characteristics`, "Less than $25,000" = "<$25k", "$25,000 - $34,999" = "$25k - $34k", "$35,000 - $49,999" = "$35k - $49k", "$50,000 - $74,999" = "$50k - $74k", "$75,000 - $99,999" = "$75k - $99k", "$100,000 - $149,999" = ">$100k"))
+
+
+us_food_rate_df_filtered$`Select characteristics` <- factor(
+  us_food_rate_df_filtered$`Select characteristics`, 
+  levels = c(
+    "<$25k",
+    "$25k - $34k",
+    "$35k - $49k",
+    "$50k - $74k",
+    "$75k - $99k",
+    ">$100k"
+  )
+)
+
+# Convert data from wide to long format
+us_food_rate_df_long <- us_food_rate_df_filtered %>%
+  pivot_longer(
+  cols = c("Often not enough to eat", "Sometimes not enough to eat", "Enough food, but not always the kinds wanted", "Enough of the kinds of food wanted"),
+    names_to = "Food_Security_Measure",
+    values_to = "Percentage"
+  )
+
+
+# Convert 'Food_Security_Measure' to an ordered factor with the desired level order
+us_food_rate_df_long$Food_Security_Measure <- factor(
+  us_food_rate_df_long$Food_Security_Measure, 
+  levels = c(
+    "Enough of the kinds of food wanted",
+    "Enough food, but not always the kinds wanted",
+    "Sometimes not enough to eat",
+    "Often not enough to eat"
+  )
+)
+
+# Create the Plotly figure from the long dataframe
+fig <- plot_ly(us_food_rate_df_long, 
+               x = ~`Select characteristics`, 
+               y = ~Percentage, 
+               type = 'bar', 
+               color = ~Food_Security_Measure,  
+              colors = c("Often not enough to eat" = "#921010", 
+                          "Sometimes not enough to eat" = "#cc9191", 
+                          "Enough food, but not always the kinds wanted" = "#9191cd", 
+                          "Enough of the kinds of food wanted" = "#07078c"),
+               text = ~paste("Income: ", `Select characteristics`, 
+                             "<br>Percentage: ", round(Percentage, 2), 
+                             "%<br>Food Security Measure: ", Food_Security_Measure),
+               hoverinfo = 'text')
+
+# Customize layout if needed
+fig <- fig %>% layout(barmode = 'stack',
+                      title = 'Food Security Status by Income',
+                      xaxis = list(title = 'Income'),
+                      yaxis = list(title = 'Percentage'),
+                      hoverlabel = list(align = 'left'))
+
+# Display the plot
+fig
+```
+
+
+
+```{r sex_food, warning=FALSE, message=FALSE}
+# Filter us data for sex only
+us_food_rate_df_filtered <- us_food_rate_df[7:8, c(1,3:6)]
+
+
+# Convert data from wide to long format
+us_food_rate_df_long <- us_food_rate_df_filtered %>%
+  pivot_longer(
+  cols = c("Often not enough to eat", "Sometimes not enough to eat", "Enough food, but not always the kinds wanted", "Enough of the kinds of food wanted"),
+    names_to = "Food_Security_Measure",
+    values_to = "Percentage"
+  )
+
+
+# Convert 'Food_Security_Measure' to an ordered factor with the desired level order
+us_food_rate_df_long$Food_Security_Measure <- factor(
+  us_food_rate_df_long$Food_Security_Measure, 
+  levels = c(
+    "Enough of the kinds of food wanted",
+    "Enough food, but not always the kinds wanted",
+    "Sometimes not enough to eat",
+    "Often not enough to eat"
+  )
+)
+
+# Create the Plotly figure from the long dataframe
+fig <- plot_ly(us_food_rate_df_long, 
+               x = ~`Select characteristics`, 
+               y = ~Percentage, 
+               type = 'bar', 
+               color = ~Food_Security_Measure, 
+               colors = c("Often not enough to eat" = "#921010", 
+                          "Sometimes not enough to eat" = "#cc9191", 
+                          "Enough food, but not always the kinds wanted" = "#9191cd", 
+                          "Enough of the kinds of food wanted" = "#07078c"),
+               text = ~paste("Sex: ", `Select characteristics`, 
+                             "<br>Percentage: ", round(Percentage, 2), 
+                             "%<br>Food Security Measure: ", Food_Security_Measure),
+               hoverinfo = 'text')
+
+# Customize layout if needed
+fig <- fig %>% layout(barmode = 'stack',
+                      title = 'Food Security Status by Sex',
+                      xaxis = list(title = 'Sex'),
+                      yaxis = list(title = 'Percentage'),
+                      hoverlabel = list(align = 'left'))
+
+# Display the plot
+fig
+```
+
+
+```{r age_food, warning=FALSE, message=FALSE}
+# Filter us data for income only
+us_food_rate_df_filtered <- us_food_rate_df[2:6, c(1,3:6)]
+
+
+# Convert data from wide to long format
+us_food_rate_df_long <- us_food_rate_df_filtered %>%
+  pivot_longer(
+  cols = c("Often not enough to eat", "Sometimes not enough to eat", "Enough food, but not always the kinds wanted", "Enough of the kinds of food wanted"),
+    names_to = "Food_Security_Measure",
+    values_to = "Percentage"
+  )
+
+
+# Convert 'Food_Security_Measure' to an ordered factor with the desired level order
+us_food_rate_df_long$Food_Security_Measure <- factor(
+  us_food_rate_df_long$Food_Security_Measure, 
+  levels = c(
+    "Enough of the kinds of food wanted",
+    "Enough food, but not always the kinds wanted",
+    "Sometimes not enough to eat",
+    "Often not enough to eat"
+  )
+)
+
+# Create the Plotly figure from the long dataframe
+fig <- plot_ly(us_food_rate_df_long, 
+               x = ~`Select characteristics`, 
+               y = ~Percentage, 
+               type = 'bar', 
+               color = ~Food_Security_Measure,
+              colors = c("Often not enough to eat" = "#921010", 
+                          "Sometimes not enough to eat" = "#cc9191", 
+                          "Enough food, but not always the kinds wanted" = "#9191cd", 
+                          "Enough of the kinds of food wanted" = "#07078c"),
+               text = ~paste("Age group: ", `Select characteristics`, 
+                             "<br>Percentage: ", round(Percentage, 2), 
+                             "%<br>Food Security Measure: ", Food_Security_Measure),
+               hoverinfo = 'text')
+
+# Customize layout if needed
+fig <- fig %>% layout(barmode = 'stack',
+                      title = 'Food Security Status by Age group',
+                      xaxis = list(title = 'Earnings Categories'),
+                      yaxis = list(title = 'Percentage'),
+                      hoverlabel = list(align = 'left'))
+
+# Display the plot
+fig
+```
+
+
+
+## Conclusion
+
+
+
+## References
+
+
+
+
+
+
+
+
+
+
+
+Income Level vs. Food Insecurity:
+
+Create a bar chart or line graph showing average food insecurity rates across different income brackets. This plot can follow the maps to start tying food insecurity to economic factors.
+
+Correlation Heatmap:
+
+If the datasets include variables like employment status, education level, or access to food programs, a correlation heatmap can illustrate how these factors are related to food insecurity rates.
+
+
+Impact of Food Insecurity on Health Outcomes:
+
+With the obesity and food insecurity data, plot the relationship between food insecurity rates and obesity or other health outcomes, highlighting the health implications of food insecurity.
+
+
+Data Analysis
+
+Once you have your data, you can start analyzing it to identify correlations between factors like poverty, food insecurity, malnutrition, and starvation. Here are some specific questions you might consider:
+
+How do poverty rates correlate with food insecurity rates across different states?
+Are there any particular demographic groups (e.g., children, older adults) that experience higher rates of food insecurity?
+Is there evidence that childhood food insecurity has lasting impacts on individuals as they mature?
+Data Visualization
+
+To effectively communicate your findings to a political audience, you'll want to create compelling data visualizations. Here are some chart types that might be useful:
+
+Choropleth maps: These maps can be used to show how food insecurity rates vary across different states.
+Bar charts: You can use bar charts to compare food insecurity rates between different demographic groups within a state.
+Line charts: Line charts can be helpful for showing trends in food insecurity rates over time.
+
+Food Insecurity by Demographics: Analyze food insecurity rates across states, broken down by income level, gender, and presence of children. Use this data to show the higher vulnerability of low-income families, particularly those with children.
+
+Childhood Nutrition and Poverty: Explore the correlation between childhood obesity rates and poverty levels by state. This will highlight how limited access to healthy food choices impacts children's health.
+
+Long-Term Effects: Utilize data on the effects of childhood malnutrition to showcase how it hinders cognitive development and increases the risk of chronic health problems in adulthood. This can lead to a cycle of poverty and dependence on social services.
+
+Data Visualization
+Interactive Map: Create a map where viewers can select a state and see the corresponding food insecurity rates for different demographics. Highlight states with the highest food insecurity rates.
+Stacked Bar Charts: Show food insecurity rates by income level within each state, allowing for easy comparison across states.
+Line Charts: Use line charts to demonstrate the correlation between childhood obesity rates and poverty levels across different states.
+Impact Infographic: Create an infographic showcasing the long-term consequences of childhood malnutrition on health, education, and future earning potential.
+
+Tailoring the Message for Policymakers
+Focus on Economic Impact: Frame the issue not just as a humanitarian concern but also as an economic burden. Highlight the potential savings from reduced healthcare costs and increased workforce productivity by addressing childhood hunger.
+State-Specific Data: Use the map visualization to present state-specific data, allowing policymakers to see the situation within their constituencies.
+Long-Term Investment: Emphasize that addressing food insecurity is an investment in the future. By ensuring proper childhood nutrition, we can create a healthier and more productive workforce.
+
+
+
+https://www.ers.usda.gov/topics/food-nutrition-assistance/food-security-in-the-u-s/interactive-charts-and-highlights/
+
+https://map.feedingamerica.org/district/2021/overall
+
+https://www.census.gov/data/tables/2022/demo/hhp/hhp44.html
+
+https://millennialcities.com/childhood-obesity-rates-by-state-ranking-from-highest-to-lowest/
+
+https://www.ncbi.nlm.nih.gov/pmc/articles/PMC4373582/
+
+https://www.ncbi.nlm.nih.gov/pmc/articles/PMC8431639/
+
+
+```{r warning=FALSE, message=FALSE}
+# UI for selecting options
+ui <- fluidPage(
+    div(
+    titlePanel("Food Insecurity Rates by State"),
+    div("Percentage of American adults in each state in households where there was sometimes or often not enough to eat, March 30 – April 11, 2022 ", align = "left", style = "margin-bottom: 20px; font-size: 12px;")
+  ),
+  
+  # Dropdown for selecting the general category 
+  selectInput("generalCategory", "Select Category:",
+              choices = c("Average in State","Sex", "Age", "Race/ethnicity", "Children in household", "Income")),
+  
+  # Outputs for the maps
+  fluidRow(
+    column(6, plotlyOutput("mapMale")),
+    column(6, plotlyOutput("mapFemale"))
+  )
+) 
+
+# Build server
+server <- function(input, output, session) {
+  
+  # Reactive expression for the male map
+  output$mapMale <- renderPlotly({
+    req(input$generalCategory == "Sex")
+    
+    # Assume food_insecurity_data has a 'male' column with the necessary data
+    # Generate the choropleth map for males
+    plot_ly() %>%
+      add_trace(
+        type = "choropleth",
+        geojson = us_states_sf,
+        locations = food_insecurity_data$state, 
+        featureidkey = 'properties.NAME',
+        z = food_insecurity_data$male,  # replace with actual column name if different
+        colorscale = custom_colorscale,
+        zmin = 6,
+        zmax = 15,
+        marker = list(line = list(width = 0))
+      ) %>%
+      colorbar(title = "Rate, %") %>%
+      layout(title = "Food Insecurity Rate by Male",
+             geo = list(scope = 'usa', projection = list(type = 'albers usa'), showlakes = FALSE))
+  })
+
+  # Reactive expression for the female map
+  output$mapFemale <- renderPlotly({
+    req(input$generalCategory == "Sex")
+    
+    # Assume food_insecurity_data has a 'female' column with the necessary data
+    # Generate the choropleth map for females
+    plot_ly() %>%
+      add_trace(
+        type = "choropleth",
+        geojson = us_states_sf,
+        locations = food_insecurity_data$state, 
+        featureidkey = 'properties.NAME',
+        z = food_insecurity_data$female,  # replace with actual column name if different
+        colorscale = custom_colorscale,
+        zmin = 6,
+        zmax = 15,
+        marker = list(line = list(width = 0))
+      ) %>%
+      colorbar(title = "Rate, %") %>%
+      layout(title = "Food Insecurity Rate by Female",
+             geo = list(scope = 'usa', projection = list(type = 'albers usa'), showlakes = FALSE))
+  })
+}
+
+# Run the app
+shinyApp(ui = ui, server = server)
+
+```
+
