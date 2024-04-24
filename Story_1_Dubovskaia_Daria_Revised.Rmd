@@ -1,0 +1,405 @@
+---
+title: "Story - 1 : Infrastructure Investment & Jobs Act Funding Allocation"
+author: 'Daria Dubovskaia'
+output:
+  html_document:
+    toc: yes
+    toc_float: yes
+    theme: united
+    code_folding: hide
+editor_options:
+  chunk_output_type: console
+  markdown: 
+    wrap: sentence
+---
+
+```{r setup, include=FALSE}
+# chunks
+knitr::opts_chunk$set(eval=TRUE, message=FALSE, warning=FALSE, fig.height=5, fig.align='center')
+
+# libraries
+library(viridis)
+library(tidyverse)
+library(caret)
+library(ggplot2)
+library(openxlsx)
+library(kableExtra)
+library(summarytools)
+library(ggpubr)
+library(plotly)
+```
+
+```{r common functions}
+#' nice_table
+#' 
+#' @param df
+#' @param fw
+nice_table <- function(df, cap=NULL, cols=NULL, dig=3, fw=F){
+  if (is.null(cols)) {c <- colnames(df)} else {c <- cols}
+  table <- df %>% 
+    kable(caption=cap, col.names=c, digits=dig) %>% 
+    kable_styling(
+      bootstrap_options = c("striped", "hover", "condensed"),
+      html_font = 'monospace',
+      full_width = fw)
+  return(table)
+}
+```
+
+
+## Overview
+The Infrastructure Investment and Jobs Act is a significant commitment by the federal government to improving the nation's infrastructure. This analysis seeks to assess the equity of the Act's funding allocation across states and territories, as well as whether there is any evidence of political bias in the distribution of funds. Understanding how these funds are allocated is critical for ensuring that the Act achieves its stated goal of equitable infrastructure development.
+
+## 1. Data Preparation
+
+### 1.1 Summary Statistics
+
+**Funding Data**
+
+The funding data contained **57** observations of 2 variables. It included columns for each state, territory, or tribal nation, as well as total funding in billions. The data source: [Github repo](https://github.com/ex-pr/DATA_608/blob/main/IIJA%20FUNDING%20AS%20OF%20MARCH%202023(1).xlsx)
+
+**Population Data**
+
+The population data had a complex structure, with row headers and numerous unnamed columns. The relevant data appeared to be organized into columns with headers such as "April 1, 2020 Population Estimates Base" and "Population Estimate (as of July 1)" for various years. As a results of data preparation step, this dataset should have contained **57** observations of 2 variables. It included columns for each state, territory, or tribal nation, as well as total population for 2020 year. The data source: [United States Census Bureau](https://www.census.gov/data/datasets/time-series/demo/popest/2020s-state-total.html), [List of U.S. states and territories by population](https://en.wikipedia.org/wiki/List_of_U.S._states_and_territories_by_population), [Native Americans in the United States](https://en.wikipedia.org/wiki/Native_Americans_in_the_United_States)
+
+
+**Election Results Data**
+
+The election results data included columns for the state, final call (indicating which party won), Democratic and Republican votes, other votes, percentages for each, and margin of victory. There were additional columns for state IDs, electoral votes, and other metadata.  As a results of data preparation step, this dataset should have contained **51** observations of 4 variables. The data source: [The Cook Political Report with Amy Walter](https://www.cookpolitical.com/2020-national-popular-vote-tracker)
+
+All three datasets had no missing values for their key columns, indicating that the data was complete in terms of the presence of values.
+
+
+```{r data_load}
+# Load data from Github
+df1 <- read.csv("https://raw.githubusercontent.com/ex-pr/DATA_608/main/Story_1/Popular%20vote%20backend%20-%20Sheet1.csv")
+
+df2 <- read.xlsx("https://github.com/ex-pr/DATA_608/blob/main/Story_1/NST-EST2023-CHG.xlsx?raw=true", 1)
+
+df3 <- read.xlsx("https://github.com/ex-pr/DATA_608/blob/main/Story_1/IIJA%20FUNDING%20AS%20OF%20MARCH%202023(1).xlsx?raw=true", 1)
+```
+
+```{r copy_data}
+elections <- df1
+population <- df2
+funding <- df3
+```
+
+
+```{r summary_data}
+#show the data in tables
+elections %>% 
+  nice_table(cap='The 2020 Presidential election') %>% 
+  scroll_box(width='100%', height = "400px")
+
+population %>% 
+  nice_table(cap='State Population Totals and Components of Change: 2020-2023') %>% 
+  scroll_box(width='100%',  height = "400px")
+
+funding %>% 
+  nice_table(cap='Allocation of the Infrastructure Investment and Jobs Act, 2023') %>% 
+  scroll_box(width='100%',  height = "400px")
+```
+
+### 1.2 Column change
+
+The funding dataset's column names have been changed to more descriptive and consistent titles, making the data easier to access and understand.To ensure consistency and accuracy in state naming, "DELEWARE" was corrected to "Delaware", as were "District Of Columbia" to "District of Columbia" and "Us Virgin Islands" to "US Virgin Islands". State names were converted from uppercase to title case (first letter uppercase, rest lowercase) to ensure consistency across datasets.
+
+```{r clear_funding}
+#change column names
+funding <- funding %>% 
+  rename("state" = "State,.Teritory.or.Tribal.Nation", "total_billions" = "Total.(Billions)")
+
+#change DELEWARE to Delaware
+funding[funding=="DELEWARE"] <- "Delaware"
+
+#change state names from uppercase to lower
+funding$state <- str_to_title(funding$state)
+
+#change DELEWARE to Delaware
+funding[funding=="District Of Columbia"] <- "District of Columbia"
+funding[funding=="Us Virgin Islands"] <- "US Virgin Islands"
+```
+
+For the population dataset, only relevant columns, specifically those containing state names and population figures, were kept and renamed for clarity. The index column was reset to ensure that rows were numbered correctly and sequentially after selecting a specific range of rows.Dots in state names were removed to ensure consistency with the naming convention used in other datasets.
+A new dataframe was created to include U.S. territories and tribal communities that were not previously included in the population dataset, ensuring complete coverage of all regions impacted by the funding.
+The population figures were converted to numeric data types, allowing for mathematical operations and analyses.
+
+```{r clear_population}
+#choose columns with states only
+population <- population[10:61,1:2] %>% 
+  rename("state" = 1, "total_population" = 2)
+
+#reset index column
+rownames(population) <- NULL 
+
+#remove dots from the state names
+population$state <- gsub("\\.", "", population$state) 
+
+#new df with us territories and population
+df <- data.frame("state" = c("Guam", "US Virgin Islands", "American Samoa", "Northern Mariana Islands", "Tribal Communities"),
+                  "total_population" = c(153836, 87146, 49710, 47329, 9666058))
+
+#add us territories to the data
+population <- rbind(population,df)
+
+#transform total_population column to numeric
+population$total_population <- as.numeric(population$total_population)
+```
+
+For the elections dataset, to ensure consistency, it was filtered to remove unnecessary rows and columns, focusing only on relevant states and removing districts within states except for the District of Columbia. Results for Democratic or Republican wins were simplified to "Biden" or "Trump" to facilitate analysis. Vote counts were originally in string format with commas but were converted to numeric values to allow for quantitative comparisons.
+
+```{r clear_elections}
+#choose columns with states only
+elections <- elections[5:61,] %>%
+  filter(!row_number() %in% c(16))
+
+#remove districts for Nebraska, Maine but keep District of Columbia
+columbia <- elections %>% 
+  filter(str_detect(state, "District of Columbia"))
+
+elections <- elections[!grepl("District", elections$state), ]
+
+elections <- rbind(elections, columbia)
+
+#choose columns with results for democrats or republicans only
+elections <- elections[,c(1, 2, 4, 5)]
+
+#substitute D, R for results with democrats win (1) or not (0)
+elections <- elections %>% mutate(win = factor(ifelse(called == "D","Biden","Trump"))) %>%
+  select(-called)
+
+#transform to numeric values columns with votes
+elections$dem_votes <- as.numeric(gsub(",", "", elections$dem_votes))
+elections$rep_votes <- as.numeric(gsub(",", "", elections$rep_votes))
+```
+
+
+### 1.3 Merge data. New features
+We also calculated the funding per capita for each state and territory by dividing the total funding by the population. This helped us assess the equity of funding allocation relative to population size. Furthermore, to improve clarity in subsequent visualizations, state names were substituted with their respective two-letter abbreviations. The datasets had been successfully merged, and the funding per capita for each state and territory had been calculated. The resulting dataset contained information such as state names, total funding in billions of dollars, population figures, an indicator of whether Biden or Trump won each state in the 2020 election, and calculated funding per capita. This extensive dataset served as the foundation for subsequent analyses, visualizations, and interpretations aimed at gaining insight into the Infrastructure Investment and Jobs Act's funding allocation.
+
+
+```{r merge_data}
+#merge funding and population data
+first_df <- merge(x = funding, y = population, by = "state", all = TRUE)
+
+#add new feature
+first_df <- first_df %>%
+  mutate(funding_per_capita = total_billions*1000000000 / total_population)
+
+#state names to abbriviations
+first_df$abbriv <- state.abb[match(first_df$state,state.name)]
+first_df <- first_df %>%
+     mutate(abbriv=replace(abbriv, state=="American Samoa", "AS")) %>%
+     mutate(abbriv=replace(abbriv, state=="District of Columbia", "DC")) %>%
+     mutate(abbriv=replace(abbriv, state=="Guam", "GU")) %>% 
+  	mutate(abbriv=replace(abbriv, state=="Northern Mariana Islands", "MP")) %>% 
+     mutate(abbriv=replace(abbriv, state=="Puerto Rico", "PR")) %>%
+     mutate(abbriv=replace(abbriv, state=="Tribal Communities", "TT")) %>%     
+     mutate(abbriv=replace(abbriv, state=="US Virgin Islands", "VI")) 
+
+#merge funding, population and election data
+second_df <- merge(x = first_df, y = elections, by = "state",  all.y = TRUE)
+
+second_df %>% 
+  nice_table(cap='Merged dataset') %>% 
+  scroll_box(width='100%', height = "400px")
+```
+
+
+
+## 2. Data analysis
+
+### 2.1 Question 1: Equitable allocation based on population
+ 
+The detailed examination of each state's funding per capita in relation to population size revealed the uneven distribution of funds, challenging the notion that allocation was solely determined by population.
+
+We saw that funding per capita varied by state, with Alaska, Wyoming, and Montana receiving the most though these states didn't have the smallest or even large population size. Highly populous states, such as California and Texas, which stand out due to their large populations, did not rank first for funding per capita. This could imply that, while these states received a significant total allocation due to their size, the per capita distribution was lower than in less populous states, indicating an attempt to distribute funds more evenly across the country. As a result, allocation was influenced by other factors such as geographical location, infrastructure requirements, or even the cost of living and construction in these areas but not solely by population size.
+
+```{r}
+# To add detailed info for each dot
+df <- first_df %>%
+  mutate(text = paste("State:", abbriv, "<br>Population:", formatC(total_population, format="d", big.mark=","), "<br>Funding Per Capita, $:", round(funding_per_capita, 2)))
+
+# Create the scatter plot
+fig <- plot_ly(data = df, x = ~total_population, y = ~funding_per_capita, text = ~text, type = 'scatter', mode = 'markers', marker = list(size = 10, opacity = 0.6), hoverinfo = 'text')  %>% 
+  layout(
+    title = list(text = 'Population vs. Funding Per Capita by State',
+    font = list(
+      size = 18,
+      color = "black",
+      weight = "bold"  # This will make the title bold
+    )
+  ),
+    annotations = list(list(
+      text = 'Each point represents a state with its funding per capita to check if the allocation equitable based on the population',
+      x = 0.5,
+      y = 1.01, # Position just below the title
+      xref = 'paper',
+      yref = 'paper',
+      showarrow = FALSE,
+      font = list(size = 12)
+    )
+  ),
+     xaxis = list(title = 'Population', size=8),
+     yaxis = list(title = 'Funding Per Capita, $', size=8),
+     hovermode = 'closest') %>% layout(width = 800)
+
+# Show the plot
+fig
+```
+
+
+### 2.2 Question 2: Political Bias in Funding
+
+This scatter plot depicted the relationship between total funding allocation and population size while also reflecting the political landscape as determined by the 2020 Presidential Election results. Points were colored to indicate whether a state was won by Biden (blue) or Trump (red). Notably, the plot did not reveal a clear pattern in which one political party's winning states consistently receive more or less funding, implying that political victory did not always translate into financial favoritism. The states with the largest populations did not always receive the most funding, and vice versa, which may indicate that factors other than population and political leanings influenced funding distribution.
+
+```{r fig.width=20}
+# Separate the data by Biden and Trump
+trump_df <- subset(second_df, win == 'Trump')
+biden_df <- subset(second_df, win == 'Biden')
+
+# Plot for Biden
+fig <- plot_ly(data = biden_df, x = ~total_population, y = ~total_billions,
+               type = 'scatter', mode = 'markers',
+               marker = list(size = 10, opacity = 0.6, color = 'blue'),
+               text = ~paste("State: ", abbriv, "<br>Population size:", formatC(total_population, format="d", big.mark=","), "<br>Funding (billions): ", total_billions),
+               hoverinfo = 'text', name = 'Biden')
+
+# Add Trump data
+fig <- fig %>% add_trace(data = trump_df, x = ~total_population, y = ~total_billions,
+                         type = 'scatter', mode = 'markers',
+                         marker = list(size = 12, opacity = 0.6, color = 'red', symbol = 'triangle-up'),
+                         text = ~paste("State: ", state, "<br>Population: ", total_population, "<br>Funding (billions): ", total_billions),
+                         hoverinfo = 'text', name = 'Trump')
+
+# Add axis and plot names
+fig <- fig %>% layout(
+   title = list(text = 'Total Funding vs. Population Size by 2020 Presidential Election Results',
+    font = list(
+      size = 18,
+      color = "black",
+      weight = "bold"  # This will make the title bold
+    )
+  ),
+  annotations = list(
+    list(text = 'State funding compared to population, colored by 2020 election results to check the political bias in funding',
+      x = 0.5,
+      y = 1.01, # Position just below the title
+      xref = 'paper',
+      yref = 'paper',
+      showarrow = FALSE,
+      font = list(size = 12)
+    )
+  ),
+  xaxis = list(title = 'Population Size', size=8),
+  yaxis = list(title = 'Total Funding (Billions)', size=8),
+  showlegend = TRUE,
+  legend = list(
+    title = list(text = "Win"))) %>% layout(width = 800)
+
+# Show the plot
+fig
+```
+
+
+```{r scatter_plot}
+# ggplot(second_df, aes(x=total_population, y=total_billions, color=factor(win))) +
+#   geom_point(aes(shape = factor(win)), size=4, alpha=0.7) +
+#   scale_color_manual(values=c('Trump'='red', 'Biden'='blue')) +
+#   scale_x_log10() +
+#   scale_y_log10() +
+#   labs(title='Total funding vs. Population Size by 2020 Presidential Election Results',
+#        x='Population Size',
+#        y='Total funding, billions',
+#        color='Win',
+#        shape='Win') +
+#   theme_minimal() +
+#   theme(legend.position="right") +
+#   geom_hline(yintercept=0, linetype="dashed") +
+#   geom_vline(xintercept=0, linetype="dashed")
+
+# From the original submission
+
+# sample_states <- first_df %>%
+#   arrange(desc(funding_per_capita)) %>% 
+#   #slice_head(n = 20) %>% 
+#   slice_head(n = 57) %>% 
+#   pull(abbriv)
+# 
+# sample_data <- first_df %>% 
+#   filter(abbriv %in% sample_states)
+# 
+#   
+# a <- ggplot(sample_data) + geom_col(aes(x=funding_per_capita, y=reorder(abbriv, funding_per_capita), fill=funding_per_capita)) +
+#   scale_fill_gradient(low="blue", high="red")+
+#   labs(title="Funding Per Capita by State/Territory", 
+#        x="Funding Per Capita, $", 
+#        y="State",
+#        fill="Funding Per Capita") + 
+#   theme_minimal() + 
+#   theme(axis.text.y  = element_text(size=6), legend.position="bottom", legend.text = element_text(size=6)) +
+#   geom_hline(yintercept=0, linetype="dashed") +
+#   geom_vline(xintercept=0, linetype="dashed")
+
+# sample_population <- first_df %>%
+#   arrange(desc(total_population)) %>% 
+#  # slice_head(n = 20) %>% 
+#   slice_head(n = 57) %>% 
+#   pull(abbriv)
+# 
+# sample_data <- first_df %>% 
+#   filter(abbriv %in% sample_population)
+# 
+# b <- ggplot(sample_data) +
+#   geom_col(aes(x=total_population, y=reorder(abbriv, total_population), fill=total_population)) +
+#   scale_fill_gradient(low="blue", high="red")+
+#   labs(title="Population by State/Territory", 
+#        x="Population", 
+#        y="State",
+#        fill="Population") + 
+#   theme_minimal() +
+#   theme(axis.text.y  = element_text(size=6), legend.position="bottom", legend.text = element_text(size=6)) +
+#   geom_hline(yintercept=0, linetype="dashed") +
+#   geom_vline(xintercept=0, linetype="dashed")
+# 
+# ggarrange(a, b, 
+#           ncol = 2)
+```
+
+
+## 3. Conclusions
+
+While some states with larger populations received more funding, there were notable exceptions in which smaller states received disproportionately high or low funding in relation to their population size. This pattern suggested that factors other than population size had a significant influence on funding allocations. Such disparities highlight the need for a closer look at the criteria used to make funding decisions, which should ideally be guided by a combination of need, capacity, and equitable growth goals.
+
+The second visualization, which compared per capita funding to population sizes while highlighting the winning party in the 2020 elections, sheded light on whether political considerations influenced funding distributions. According to the analysis, there was no clear national pattern of preferential funding based on party affiliation. However, individual cases in which states deviated from the general funding pattern necessitate further investigation to rule out or confirm political favoritism.
+
+Based on these findings, policymakers and stakeholders involved in the distribution of IIJA funds should consider using more transparent and formula-based allocation methods that can be publicly verified. Furthermore, more research should be conducted into the specific outliers identified in this analysis to ensure that all states and territories receive fair funding that reflects their infrastructure needs and promotes equitable development. Continuing this research could include more detailed statistical analysis to quantify the impact of political bias, as well as a closer look at the socioeconomic factors that influence funding decisions. Such studies would provide a more complete picture of how effectively federal funds are used to promote balanced economic growth across the country.
+
+
+## References
+
+1) Knaflic, C. N. (2015). Storytelling with Data. https://doi.org/10.1002/9781119055259
+
+2) US Census Bureau. (2023, December 18). State Population Totals and Components of Change: 2020-2023. Census.gov. https://www.census.gov/data/datasets/time-series/demo/popest/2020s-state-total.html
+
+3) 2020 | The American Presidency Project. (n.d.). https://www.presidency.ucsb.edu/statistics/elections/2020
+
+4) Cook Political Report. (n.d.). 2020 Popular Vote Tracker | Cook Political Report. https://www.cookpolitical.com/2020-national-popular-vote-tracker
+
+5) Wikipedia contributors. (2024, February 1). List of U.S. states and territories by population. Wikipedia. https://en.wikipedia.org/wiki/List_of_U.S._states_and_territories_by_population
+
+
+6) Wikipedia contributors. (2024a, January 27). Native Americans in the United States. Wikipedia. https://en.wikipedia.org/wiki/Native_Americans_in_the_United_States
+
+
+7) Ex-Pr. (n.d.). GitHub - ex-pr/DATA_608. GitHub. https://github.com/ex-pr/DATA_608/tree/main
+
+8) The Data Visualisation catalogue. (n.d.). https://datavizcatalogue.com/index.html
+
+
+
+
+
+
+
