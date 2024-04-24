@@ -26,10 +26,7 @@ library(openxlsx)
 library(kableExtra)
 library(summarytools)
 library(ggpubr)
-
-
-# random seed
-set.seed(42)
+library(plotly)
 ```
 
 ```{r common functions}
@@ -75,11 +72,11 @@ All three datasets had no missing values for their key columns, indicating that 
 
 ```{r data_load}
 # Load data from Github
-df1 <- read.csv("https://raw.githubusercontent.com/ex-pr/DATA_608/main/Popular%20vote%20backend%20-%20Sheet1.csv")
+df1 <- read.csv("https://raw.githubusercontent.com/ex-pr/DATA_608/main/Story_1/Popular%20vote%20backend%20-%20Sheet1.csv")
 
-df2 <- read.xlsx("https://github.com/ex-pr/DATA_608/blob/main/NST-EST2023-CHG.xlsx?raw=true", 1)
+df2 <- read.xlsx("https://github.com/ex-pr/DATA_608/blob/main/Story_1/NST-EST2023-CHG.xlsx?raw=true", 1)
 
-df3 <- read.xlsx("https://github.com/ex-pr/DATA_608/blob/main/IIJA%20FUNDING%20AS%20OF%20MARCH%202023(1).xlsx?raw=true", 1)
+df3 <- read.xlsx("https://github.com/ex-pr/DATA_608/blob/main/Story_1/IIJA%20FUNDING%20AS%20OF%20MARCH%202023(1).xlsx?raw=true", 1)
 ```
 
 ```{r copy_data}
@@ -213,64 +210,43 @@ second_df %>%
 
 ## 2. Data analysis
 
-For our visual analysis, we used bar plots to represent funding per capita because they clearly show comparative differences between states. Scatter plots were used to visually represent the relationship between funding per capita and population size, taking advantage of their ability to display correlations between two quantitative variables. These plots were chosen to effectively communicate funding distribution and disparities.
-
-
 ### 2.1 Question 1: Equitable allocation based on population
  
-Our detailed examination of each state's funding per capita in relation to population size revealed significant disparities. The visualization of funding per capita by state/territory reveals the uneven distribution of funds, challenging the notion that allocation was solely determined by population.
+The detailed examination of each state's funding per capita in relation to population size revealed the uneven distribution of funds, challenging the notion that allocation was solely determined by population.
 
-The funding per capita by state/territory visualization clearly depicted the distribution of funds relative to the population. We saw that funding per capita varied by state, with Alaska, Wyoming, and North Dakota receiving the most. This could imply that allocation was influenced by other factors such as geographical location, infrastructure requirements, or even the cost of living and construction in these areas. The next bar chart showed the populations of each state and territory. The stark contrast in population sizes across the United States was immediately noticeable, with states such as California and Texas dwarfing others. Notably, smaller states and territories, despite having fewer people, sometimes received more funding per capita, implying a complex allocation mechanism that takes into account factors other than sheer population.
+We saw that funding per capita varied by state, with Alaska, Wyoming, and Montana receiving the most though these states didn't have the smallest or even large population size. Highly populous states, such as California and Texas, which stand out due to their large populations, did not rank first for funding per capita. This could imply that, while these states received a significant total allocation due to their size, the per capita distribution was lower than in less populous states, indicating an attempt to distribute funds more evenly across the country. As a result, allocation was influenced by other factors such as geographical location, infrastructure requirements, or even the cost of living and construction in these areas but not solely by population size.
 
-For example, there appeared to be an inverse relationship in some states, where a smaller population correlated with more funding per person. States with smaller populations, such as Alaska and North Dakota, received some of the highest funding per capita. This implied that funding allocation may be compensating for factors such as geographical size and infrastructure requirements that were not directly proportional to population size. Highly populous states, such as California and Texas, which stand out due to their large populations, did not rank first for funding per capita. This could imply that, while these states received a significant total allocation due to their size, the per capita distribution was lower than in less populous states, indicating an attempt to distribute funds more evenly across the country.
+```{r}
+# To add detailed info for each dot
+df <- first_df %>%
+  mutate(text = paste("State:", abbriv, "<br>Population:", formatC(total_population, format="d", big.mark=","), "<br>Funding Per Capita, $:", round(funding_per_capita, 2)))
 
-```{r state_funding, fig.height = 6}
-sample_states <- first_df %>%
-  arrange(desc(funding_per_capita)) %>% 
-  #slice_head(n = 20) %>% 
-  slice_head(n = 57) %>% 
-  pull(abbriv)
+# Create the scatter plot
+fig <- plot_ly(data = df, x = ~total_population, y = ~funding_per_capita, text = ~text, type = 'scatter', mode = 'markers', marker = list(size = 10, opacity = 0.6), hoverinfo = 'text')  %>% 
+  layout(
+    title = list(text = 'Population vs. Funding Per Capita by State',
+    font = list(
+      size = 18,
+      color = "black",
+      weight = "bold"  # This will make the title bold
+    )
+  ),
+    annotations = list(list(
+      text = 'Each point represents a state with its funding per capita to check if the allocation equitable based on the population',
+      x = 0.5,
+      y = 1.01, # Position just below the title
+      xref = 'paper',
+      yref = 'paper',
+      showarrow = FALSE,
+      font = list(size = 12)
+    )
+  ),
+     xaxis = list(title = 'Population', size=8),
+     yaxis = list(title = 'Funding Per Capita, $', size=8),
+     hovermode = 'closest') %>% layout(width = 800)
 
-sample_data <- first_df %>% 
-  filter(abbriv %in% sample_states)
-
-  
-a <- ggplot(sample_data) + geom_col(aes(x=funding_per_capita, y=reorder(abbriv, funding_per_capita), fill=funding_per_capita)) +
-  scale_fill_gradient(low="blue", high="red")+
-  labs(title="Funding Per Capita by State/Territory", 
-       x="Funding Per Capita, $", 
-       y="State",
-       fill="Funding Per Capita") + 
-  theme_minimal() + 
-  theme(axis.text.y  = element_text(size=6), legend.position="bottom", legend.text = element_text(size=6)) +
-  geom_hline(yintercept=0, linetype="dashed") +
-  geom_vline(xintercept=0, linetype="dashed")
-```
-
-```{r state_population, fig.height = 6}
-sample_population <- first_df %>%
-  arrange(desc(total_population)) %>% 
- # slice_head(n = 20) %>% 
-  slice_head(n = 57) %>% 
-  pull(abbriv)
-
-sample_data <- first_df %>% 
-  filter(abbriv %in% sample_population)
-
-b <- ggplot(sample_data) +
-  geom_col(aes(x=total_population, y=reorder(abbriv, total_population), fill=total_population)) +
-  scale_fill_gradient(low="blue", high="red")+
-  labs(title="Population by State/Territory", 
-       x="Population", 
-       y="State",
-       fill="Population") + 
-  theme_minimal() +
-  theme(axis.text.y  = element_text(size=6), legend.position="bottom", legend.text = element_text(size=6)) +
-  geom_hline(yintercept=0, linetype="dashed") +
-  geom_vline(xintercept=0, linetype="dashed")
-
-ggarrange(a, b, 
-          ncol = 2)
+# Show the plot
+fig
 ```
 
 
@@ -278,57 +254,127 @@ ggarrange(a, b,
 
 This scatter plot depicted the relationship between total funding allocation and population size while also reflecting the political landscape as determined by the 2020 Presidential Election results. Points were colored to indicate whether a state was won by Biden (blue) or Trump (red). Notably, the plot did not reveal a clear pattern in which one political party's winning states consistently receive more or less funding, implying that political victory did not always translate into financial favoritism. The states with the largest populations did not always receive the most funding, and vice versa, which may indicate that factors other than population and political leanings influenced funding distribution.
 
-The bar plot revisited the average funding per capita by political affiliation, with a dashed line representing the overall average funding per capita across all states. It allowed for a direct comparison of state political affiliations (Biden vs. Trump) against the backdrop of the overall funding average. The inclusion of the overall average allowed us to assess whether the funding received by states won by Biden or Trump deviates significantly from the national norm. This graph showed that, while there could be differences in average funding per capita by political affiliation, both averages were close to the overall funding line, indicating a more nuanced distribution than a simple bias towards one political group.
+```{r fig.width=20}
+# Separate the data by Biden and Trump
+trump_df <- subset(second_df, win == 'Trump')
+biden_df <- subset(second_df, win == 'Biden')
+
+# Plot for Biden
+fig <- plot_ly(data = biden_df, x = ~total_population, y = ~total_billions,
+               type = 'scatter', mode = 'markers',
+               marker = list(size = 10, opacity = 0.6, color = 'blue'),
+               text = ~paste("State: ", abbriv, "<br>Population size:", formatC(total_population, format="d", big.mark=","), "<br>Funding (billions): ", total_billions),
+               hoverinfo = 'text', name = 'Biden')
+
+# Add Trump data
+fig <- fig %>% add_trace(data = trump_df, x = ~total_population, y = ~total_billions,
+                         type = 'scatter', mode = 'markers',
+                         marker = list(size = 12, opacity = 0.6, color = 'red', symbol = 'triangle-up'),
+                         text = ~paste("State: ", state, "<br>Population: ", total_population, "<br>Funding (billions): ", total_billions),
+                         hoverinfo = 'text', name = 'Trump')
+
+# Add axis and plot names
+fig <- fig %>% layout(
+   title = list(text = 'Total Funding vs. Population Size by 2020 Presidential Election Results',
+    font = list(
+      size = 18,
+      color = "black",
+      weight = "bold"  # This will make the title bold
+    )
+  ),
+  annotations = list(
+    list(text = 'State funding compared to population, colored by 2020 election results to check the political bias in funding',
+      x = 0.5,
+      y = 1.01, # Position just below the title
+      xref = 'paper',
+      yref = 'paper',
+      showarrow = FALSE,
+      font = list(size = 12)
+    )
+  ),
+  xaxis = list(title = 'Population Size', size=8),
+  yaxis = list(title = 'Total Funding (Billions)', size=8),
+  showlegend = TRUE,
+  legend = list(
+    title = list(text = "Win"))) %>% layout(width = 800)
+
+# Show the plot
+fig
+```
+
 
 ```{r scatter_plot}
-ggplot(second_df, aes(x=total_population, y=total_billions, color=factor(win))) +
-  geom_point(aes(shape = factor(win)), size=4, alpha=0.7) +
-  scale_color_manual(values=c('Trump'='red', 'Biden'='blue')) +
-  scale_x_log10() +
-  scale_y_log10() +
-  labs(title='Total funding vs. Population Size by 2020 Presidential Election Results',
-       x='Population Size',
-       y='Total funding, billions',
-       color='Win',
-       shape='Win') +
-  theme_minimal() +
-  theme(legend.position="right") +
-  geom_hline(yintercept=0, linetype="dashed") +
-  geom_vline(xintercept=0, linetype="dashed")
+# ggplot(second_df, aes(x=total_population, y=total_billions, color=factor(win))) +
+#   geom_point(aes(shape = factor(win)), size=4, alpha=0.7) +
+#   scale_color_manual(values=c('Trump'='red', 'Biden'='blue')) +
+#   scale_x_log10() +
+#   scale_y_log10() +
+#   labs(title='Total funding vs. Population Size by 2020 Presidential Election Results',
+#        x='Population Size',
+#        y='Total funding, billions',
+#        color='Win',
+#        shape='Win') +
+#   theme_minimal() +
+#   theme(legend.position="right") +
+#   geom_hline(yintercept=0, linetype="dashed") +
+#   geom_vline(xintercept=0, linetype="dashed")
+
+# From the original submission
+
+# sample_states <- first_df %>%
+#   arrange(desc(funding_per_capita)) %>% 
+#   #slice_head(n = 20) %>% 
+#   slice_head(n = 57) %>% 
+#   pull(abbriv)
+# 
+# sample_data <- first_df %>% 
+#   filter(abbriv %in% sample_states)
+# 
+#   
+# a <- ggplot(sample_data) + geom_col(aes(x=funding_per_capita, y=reorder(abbriv, funding_per_capita), fill=funding_per_capita)) +
+#   scale_fill_gradient(low="blue", high="red")+
+#   labs(title="Funding Per Capita by State/Territory", 
+#        x="Funding Per Capita, $", 
+#        y="State",
+#        fill="Funding Per Capita") + 
+#   theme_minimal() + 
+#   theme(axis.text.y  = element_text(size=6), legend.position="bottom", legend.text = element_text(size=6)) +
+#   geom_hline(yintercept=0, linetype="dashed") +
+#   geom_vline(xintercept=0, linetype="dashed")
+
+# sample_population <- first_df %>%
+#   arrange(desc(total_population)) %>% 
+#  # slice_head(n = 20) %>% 
+#   slice_head(n = 57) %>% 
+#   pull(abbriv)
+# 
+# sample_data <- first_df %>% 
+#   filter(abbriv %in% sample_population)
+# 
+# b <- ggplot(sample_data) +
+#   geom_col(aes(x=total_population, y=reorder(abbriv, total_population), fill=total_population)) +
+#   scale_fill_gradient(low="blue", high="red")+
+#   labs(title="Population by State/Territory", 
+#        x="Population", 
+#        y="State",
+#        fill="Population") + 
+#   theme_minimal() +
+#   theme(axis.text.y  = element_text(size=6), legend.position="bottom", legend.text = element_text(size=6)) +
+#   geom_hline(yintercept=0, linetype="dashed") +
+#   geom_vline(xintercept=0, linetype="dashed")
+# 
+# ggarrange(a, b, 
+#           ncol = 2)
 ```
 
-
-```{r average_fund}
-election_outcome <- second_df %>%
-  group_by(win) %>%
-  summarise(funding_per_capita = mean(funding_per_capita)) %>%
-  as.data.frame()
-
-avg_funding <- mean(second_df$funding_per_capita)
-
-ggplot(election_outcome, aes(x=factor(win, labels=c('Trump', 'Biden')), y=funding_per_capita, fill=factor(win))) +
-  geom_bar(stat="identity", position="dodge") +
-   geom_hline(yintercept=avg_funding, color='darkviolet', linetype='dashed', linewidth=1) + 
-  scale_fill_manual(values=c('blue', 'red')) +
-  labs(title='Average Funding per Capita by 2020 Presidential Election Outcome',
-       x='2020 Election Winner',
-       y='Average Funding per Capita, $') +
-  theme_minimal() +
-  theme(legend.position="none") +
-  scale_x_discrete(labels=c('Biden Wins', 'Trump Wins')) +
-  geom_hline(yintercept=0, linetype="dashed") +
-  geom_vline(xintercept=0, linetype="dashed")
-
-```
 
 ## 3. Conclusions
 
-While the allocation of Infrastructure Investment and Jobs Act funding was not strictly proportional to population size, it did appear to take into account factors other than sheer numbers. This approach may seek to address the unique needs and challenges of each state or territory, implying a multifaceted allocation strategy rather than a purely population-based one.
+While some states with larger populations received more funding, there were notable exceptions in which smaller states received disproportionately high or low funding in relation to their population size. This pattern suggested that factors other than population size had a significant influence on funding allocations. Such disparities highlight the need for a closer look at the criteria used to make funding decisions, which should ideally be guided by a combination of need, capacity, and equitable growth goals.
 
-The analysis of funding allocation in relation to state populations and political outcomes from the 2020 Presidential Election revealed no clear, consistent pattern of political bias in fund distribution. Both visuals indicated that states won by either party received funding without a significant partisan skew. These findings indicate that, while politics will undoubtedly play a role in federal funding decisions, other non-partisan factors such as specific state needs, the cost of infrastructure projects, and regional economic considerations were likely to have a significant impact on how funds were allocated. To ensure transparency and fairness in federal financial distributions, these allocations must be monitored and analyzed on a continuous basis.
+The second visualization, which compared per capita funding to population sizes while highlighting the winning party in the 2020 elections, sheded light on whether political considerations influenced funding distributions. According to the analysis, there was no clear national pattern of preferential funding based on party affiliation. However, individual cases in which states deviated from the general funding pattern necessitate further investigation to rule out or confirm political favoritism.
 
-As we examine these allocations, the visual narratives highlight the importance of a data-driven approach to policy evaluation, recognizing that infrastructure needs vary across the country. Our findings suggest that while the allocation process may strive for equitable development, it also points to the need for transparency and ongoing analysis to fully understand the underlying principles guiding these significant federal investments.
-
+Based on these findings, policymakers and stakeholders involved in the distribution of IIJA funds should consider using more transparent and formula-based allocation methods that can be publicly verified. Furthermore, more research should be conducted into the specific outliers identified in this analysis to ensure that all states and territories receive fair funding that reflects their infrastructure needs and promotes equitable development. Continuing this research could include more detailed statistical analysis to quantify the impact of political bias, as well as a closer look at the socioeconomic factors that influence funding decisions. Such studies would provide a more complete picture of how effectively federal funds are used to promote balanced economic growth across the country.
 
 
 ## References
