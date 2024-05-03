@@ -1,0 +1,226 @@
+Strategic Material,Material Category,Country,Percentage,Category,iso_a3
+Barite or Barium Sulfate,Compounds,China,38.0,Competitor,CHN
+Barite or Barium Sulfate,Compounds,India,29.0,Neutral,IND
+Barite or Barium Sulfate,Compounds,Morocco,16.0,Neutral,MAR
+Barite or Barium Sulfate,Compounds,Mexico,13.0,Ally,MEX
+Barite or Barium Sulfate,Compounds,other,4.0,Neutral,other
+Fluorspar or Calcium Fluoride,Compounds,Mexico,66.0,Ally,MEX
+Fluorspar or Calcium Fluoride,Compounds,Vietnam,16.0,Neutral,VNM
+Fluorspar or Calcium Fluoride,Compounds,South Africa,7.0,Neutral,ZAF
+Fluorspar or Calcium Fluoride,Compounds,Canada,7.0,Ally,CAN
+Fluorspar or Calcium Fluoride,Compounds,other,4.0,Neutral,other
+Potash,Compounds,Canada,79.0,Ally,CAN
+Potash,Compounds,Russia,9.0,Competitor,RUS
+Potash,Compounds,Belarus,7.0,Competitor,BLR
+Potash,Compounds,other,5.0,Neutral,other
+Aluminum,Metals,Brazil,59.0,Neutral,BRA
+Aluminum,Metals,Australia,14.0,Ally,AUS
+Aluminum,Metals,Jamaica,14.0,Neutral,JAM
+Aluminum,Metals,Canada,5.0,Ally,CAN
+Aluminum,Metals,other,8.0,Neutral,other
+Antimony,Metals,China,63.0,Competitor,CHN
+Antimony,Metals,Belgium,8.0,Ally,BEL
+Antimony,Metals,India,7.0,Neutral,IND
+Antimony,Metals,other,22.0,Neutral,other
+Bismuth,Metals,China,65.0,Competitor,CHN
+Bismuth,Metals,Republic of Korea,19.0,Ally,KOR
+Bismuth,Metals,Mexico,5.0,Ally,MEX
+Bismuth,Metals,Belgium,3.0,Ally,BEL
+Bismuth,Metals,other,8.0,Neutral,other
+Cadmium,Metals,Australia,27.0,Ally,AUS
+Cadmium,Metals,Germany,23.0,Ally,GER
+Cadmium,Metals,China,20.0,Competitor,CHN
+Cadmium,Metals,Peru,12.0,Neutral,PER
+Cadmium,Metals,other,18.0,Neutral,other
+Chromium,Metals,South Africa,37.0,Neutral,ZAF
+Chromium,Metals,Kazakhstan,10.0,Neutral,KAZ
+Chromium,Metals,Russia,7.0,Competitor,RUS
+Chromium,Metals,Germany,6.0,Ally,GER
+Chromium,Metals,other,40.0,Neutral,other
+Cobalt,Metals,Norway,22.0,Ally,NOR
+Cobalt,Metals,Canada,16.0,Ally,CAN
+Cobalt,Metals,Finland,12.0,Neutral,FIN
+Cobalt,Metals,Japan,12.0,Ally,JPN
+Cobalt,Metals,other,38.0,Neutral,other
+Copper,Metals,Chile,64.0,Neutral,CHL
+Copper,Metals,Canada,20.0,Ally,CAN
+Copper,Metals,Mexico,11.0,Ally,MEX
+Copper,Metals,other,5.0,Neutral,other
+Gallium,Metals,China,53.0,Competitor,CHN
+Gallium,Metals,Germany,13.0,Ally,GER
+Gallium,Metals,Japan,13.0,Ally,JPN
+Gallium,Metals,Ukraine,5.0,Ally,UKR
+Gallium,Metals,other,16.0,Neutral,other
+Indium,Metals,Republic of Korea,32.0,Ally,KOR
+Indium,Metals,Canada,22.0,Ally,CAN
+Indium,Metals,China,18.0,Competitor,CHN
+Indium,Metals,France,9.0,Ally,FRA
+Indium,Metals,other,19.0,Neutral,other
+Lead,Metals,Canada,42.0,Ally,CAN
+Lead,Metals,Mexico,18.0,Ally,MEX
+Lead,Metals,Republic of Korea,14.0,Ally,KOR
+Lead,Metals,other,26.0,Neutral,other
+Lithium,Metals,Argentina,51.0,Neutral,ARG
+Lithium,Metals,Chile,40.0,Neutral,CHL
+Lithium,Metals,China,4.0,Competitor,CHN
+Lithium,Metals,Russia,3.0,Competitor,RUS
+Lithium,Metals,other,2.0,Neutral,other
+Magnesium,Metals,Canada,21.0,Ally,CAN
+Magnesium,Metals,Israel,11.0,Ally,ISR
+Magnesium,Metals,Mexico,10.0,Ally,MEX
+Magnesium,Metals,Taiwan,9.0,Ally,TWN
+Magnesium,Metals,other,49.0,Neutral,other
+Manganese,Metals,Gabon,67.0,Neutral,GAB
+Manganese,Metals,South Africa,19.0,Neutral,ZAF
+Manganese,Metals,Mexico,12.0,Ally,MEX
+Manganese,Metals,other,2.0,Neutral,other
+Mercury,Metals,Canada,69.0,Ally,CAN
+Mercury,Metals,China,31.0,Competitor,CHN
+Mercury,Metals,other,0.0,Neutral,other
+Molybdenum,Metals,Peru,60.0,Neutral,PER
+Molybdenum,Metals,Mexico,15.0,Ally,MEX
+Molybdenum,Metals,Chile,14.0,Neutral,CHL
+Molybdenum,Metals,other,11.0,Neutral,other
+Nickel,Metals,Canada,45.0,Ally,CAN
+Nickel,Metals,Norway,9.0,Ally,NOR
+Nickel,Metals,Australia,8.0,Ally,AUS
+Nickel,Metals,Finland,7.0,Neutral,FIN
+Nickel,Metals,other,31.0,Neutral,other
+Niobium,Metals,Brazil,67.0,Neutral,BRA
+Niobium,Metals,Canada,28.0,Ally,CAN
+Niobium,Metals,Russia,3.0,Competitor,RUS
+Niobium,Metals,Germany,1.0,Ally,GER
+Niobium,Metals,other,1.0,Neutral,other
+Rhenium,Metals,Chile,63.0,Neutral,CHL
+Rhenium,Metals,Canada,10.0,Ally,CAN
+Rhenium,Metals,Germany,8.0,Ally,GER
+Rhenium,Metals,Kazakhstan,7.0,Neutral,KAZ
+Rhenium,Metals,other,12.0,Neutral,other
+Strontium,Metals,Mexico,75.0,Ally,MEX
+Strontium,Metals,Germany,21.0,Ally,GER
+Strontium,Metals,China,2.0,Competitor,CHN
+Strontium,Metals,other,2.0,Neutral,other
+Tantalum,Metals,China,24.0,Competitor,CHN
+Tantalum,Metals,Germany,12.0,Ally,GER
+Tantalum,Metals,Australia,10.0,Ally,AUS
+Tantalum,Metals,Indonesia,8.0,Neutral,IDN
+Tantalum,Metals,other,46.0,Neutral,other
+Tin,Metals,Peru,25.0,Neutral,PER
+Tin,Metals,Indonesia,24.0,Neutral,IDN
+Tin,Metals,Bolivia,17.0,Neutral,BOL
+Tin,Metals,Malaysia,16.0,Neutral,MYS
+Tin,Metals,other,18.0,Neutral,other
+Titanium,Metals,Japan,89.0,Ally,JPN
+Titanium,Metals,Kazakhstan,9.0,Neutral,KAZ
+Titanium,Metals,Ukraine,1.0,Ally,UKR
+Titanium,Metals,other,1.0,Neutral,other
+Tungsten,Metals,China,29.0,Competitor,CHN
+Tungsten,Metals,Germany,11.0,Ally,GER
+Tungsten,Metals,Bolivia,9.0,Neutral,BOL
+Tungsten,Metals,Vietnam,6.0,Neutral,VNM
+Tungsten,Metals,other,45.0,Neutral,other
+Uranium,Metals,Canada,15.6,Ally,CAN
+Uranium,Metals,Kazakhstan,37.4,Neutral,KAZ
+Uranium,Metals,Russia,14.3,Competitor,RUS
+Uranium,Metals,Australia,15.0,Ally,AUS
+Uranium,Metals,Namibia,7.3,Neutral,NAM
+Uranium,Metals,other,10.4,Neutral,other
+Vanadium,Metals,Canada,31.0,Ally,CAN
+Vanadium,Metals,China,13.0,Competitor,CHN
+Vanadium,Metals,Brazil,8.0,Neutral,BRA
+Vanadium,Metals,South Africa,7.0,Neutral,ZAF
+Vanadium,Metals,other,41.0,Neutral,other
+Zinc,Metals,Canada,66.0,Ally,CAN
+Zinc,Metals,Mexico,16.0,Ally,MEX
+Zinc,Metals,Peru,6.0,Neutral,PER
+Zinc,Metals,Spain,6.0,Ally,ESP
+Zinc,Metals,other,6.0,Neutral,other
+Zirconium,Metals,South Africa,51.0,Neutral,ZAF
+Zirconium,Metals,Senegal,25.0,Neutral,SEN
+Zirconium,Metals,Australia,21.0,Ally,AUS
+Zirconium,Metals,Russia,2.0,Competitor,RUS
+Zirconium,Metals,other,1.0,Neutral,other
+Platinum,Precious Metals,South Africa,34.0,Neutral,ZAF
+Platinum,Precious Metals,Germany,18.0,Ally,GER
+Platinum,Precious Metals,Switzerland,14.0,Neutral,SUI
+Platinum,Precious Metals,Italy,7.0,Ally,ITA
+Platinum,Precious Metals,other,27.0,Neutral,other
+Silver,Precious Metals,Mexico,47.0,Ally,MEX
+Silver,Precious Metals,Canada,21.0,Ally,CAN
+Silver,Precious Metals,Poland,5.0,Ally,POL
+Silver,Precious Metals,Chile,4.0,Neutral,CHL
+Silver,Precious Metals,other,23.0,Neutral,other
+Arsenic,Non-metals,China,57.0,Competitor,CHN
+Arsenic,Non-metals,Morocco,35.0,Neutral,MAR
+Arsenic,Non-metals,Belgium,4.0,Ally,BEL
+Arsenic,Non-metals,other,4.0,Neutral,other
+Boron,Non-metals,Turkey,90.0,Neutral,TUR
+Boron,Non-metals,Bolivia,5.0,Neutral,BOL
+Boron,Non-metals,Chile,2.0,Neutral,CHL
+Boron,Non-metals,other,3.0,Neutral,other
+Germanium,Non-metals,China,54.0,Competitor,CHN
+Germanium,Non-metals,Belgium,27.0,Ally,BEL
+Germanium,Non-metals,Germany,9.0,Ally,GER
+Germanium,Non-metals,Russia,8.0,Competitor,RUS
+Germanium,Non-metals,other,2.0,Neutral,other
+Graphite / Carbon,Non-metals,China,33.0,Competitor,CHN
+Graphite / Carbon,Non-metals,Mexico,18.0,Ally,MEX
+Graphite / Carbon,Non-metals,Canada,17.0,Ally,CAN
+Graphite / Carbon,Non-metals,Madagascar,10.0,Neutral,MDG
+Graphite / Carbon,Non-metals,other,22.0,Neutral,other
+Helium,Non-metals,Qatar,53.0,Neutral,QAT
+Helium,Non-metals,Canada,20.0,Ally,CAN
+Helium,Non-metals,Algeria,15.0,Neutral,ALG
+Helium,Non-metals,Russia,5.0,Competitor,RUS
+Helium,Non-metals,other,7.0,Neutral,other
+Natural Rubber,Non-metals,Indonesia,56.0,Neutral,IDN
+Natural Rubber,Non-metals,Thailand,23.0,Neutral,THA
+Natural Rubber,Non-metals,Cote d'Ivoire,6.0,Neutral,CIV
+Natural Rubber,Non-metals,Liberia,3.0,Neutral,LBR
+Natural Rubber,Non-metals,Malaysia,3.0,Neutral,MYS
+Natural Rubber,Non-metals,Vietnam,3.0,Neutral,VNM
+Natural Rubber,Non-metals,other,6.0,Neutral,other
+Quartz Crystal,Non-metals,China,90.0,Competitor,CHN
+Quartz Crystal,Non-metals,Japan,3.0,Ally,JPN
+Quartz Crystal,Non-metals,Russia,2.0,Competitor,RUS
+Quartz Crystal,Non-metals,other,5.0,Neutral,other
+Selenium,Non-metals,Philippines,21.0,Neutral,PHI
+Selenium,Non-metals,Mexico,15.0,Ally,MEX
+Selenium,Non-metals,Germany,13.0,Ally,GER
+Selenium,Non-metals,China,9.0,Competitor,CHN
+Selenium,Non-metals,other,42.0,Neutral,other
+Silicon,Non-metals,Russia,22.0,Competitor,RUS
+Silicon,Non-metals,Brazil,20.0,Neutral,BRA
+Silicon,Non-metals,Canada,18.0,Ally,CAN
+Silicon,Non-metals,Norway,8.0,Ally,NOR
+Silicon,Non-metals,other,32.0,Neutral,other
+Tellurium,Non-metals,Canada,52.0,Ally,CAN
+Tellurium,Non-metals,Germany,24.0,Ally,GER
+Tellurium,Non-metals,China,12.0,Competitor,CHN
+Tellurium,Non-metals,Philippines,8.0,Neutral,PHI
+Tellurium,Non-metals,other,4.0,Neutral,other
+Cerium,Rare Earth Elements,China,74.0,Competitor,CHN
+Cerium,Rare Earth Elements,Malaysia,8.0,Neutral,MYS
+Cerium,Rare Earth Elements,Estonia,5.0,Neutral,EST
+Cerium,Rare Earth Elements,Japan,5.0,Ally,JPN
+Cerium,Rare Earth Elements,other,8.0,Neutral,other
+Yttrium,Rare Earth Elements,China,94.0,Competitor,CHN
+Yttrium,Rare Earth Elements,Germany,3.0,Ally,GER
+Yttrium,Rare Earth Elements,Republic of Korea,1.0,Ally,KOR
+Yttrium,Rare Earth Elements,Japan,1.0,Ally,JPN
+Yttrium,Rare Earth Elements,other,1.0,Neutral,other
+Beryllium,Metals,Kazakhstan,43.0,Neutral,KAZ
+Beryllium,Metals,Japan,15.0,Ally,JPN
+Beryllium,Metals,Latvia,15.0,Neutral,LVA
+Beryllium,Metals,Brazil,10.0,Neutral,BRA
+Beryllium,Metals,other,17.0,Neutral,other
+Hafnium,Metals,Germany,36.0,Ally,GER
+Hafnium,Metals,France,30.0,Ally,FRA
+Hafnium,Metals,China,26.0,Competitor,CHN
+Hafnium,Metals,Russia,3.0,Competitor,RUS
+Hafnium,Metals,other,5.0,Neutral,other
+Palladium,Precious Metals,Russia,34.0,Competitor,RUS
+Palladium,Precious Metals,South Africa,30.0,Neutral,ZAF
+Palladium,Precious Metals,Italy,8.0,Ally,ITA
+Palladium,Precious Metals,Germany,8.0,Ally,GER
+Palladium,Precious Metals,other,20.0,Neutral,other
